@@ -1,5 +1,5 @@
 name: evident-evidence
-version: 0.19.0
+version: 0.19.1
 description: "Is this evident? Explore how a website comes across to its visitors and buyers in one visual report."
 python_dependencies:
   - playwright==1.64.0
@@ -7,6 +7,7 @@ provides_tools:
   - evident_memory
   - evident_save_test
   - evident_scan
+  - evident_finish
   - evident_demo
   - evident_report
   - evident_browse
@@ -16,7 +17,8 @@ provides_tools:
   - evident_verify
   - evident_inspect
   - evident_delete
-provides_hooks: []
+provides_hooks:
+  - pre_llm_call
 capabilities: []
 config_schema:
   reuse_hermes_browser:

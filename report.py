@@ -229,22 +229,33 @@ def save_review(store, run_id, review, *, export=True):
     return export_report(store, run_id) if export else None
 
 
-def export_report(store, run_id):
-    with store.lease():
-        record = store.inspect(run_id)
-        baseline = None
-        baseline_id = record["result"].get("baseline")
-        if baseline_id:
-            try:
-                baseline = store.inspect(baseline_id)
-            except FileNotFoundError:
-                pass
-        name = "reviewed-report.html" if record.get("review") else "report.html"
+def export_report(store, run_id, *, record=None):
+    # Publication already uses an atomic no-overwrite link. Reading one retained run
+    # must not wait for the profile-wide browser/model lease.
+    record = store.inspect(run_id) if record is None else record
+    partial_snapshot = (record.get("partial_snapshot") or record["result"].get("state") == "incomplete" or
+                        ("scan" not in record and any(k in record for k in ("request", "site_context", "context"))))
+    if partial_snapshot:
+        record = {**record, "scan": {**record.get("website_review", record.get("request", {})),
+                  **record.get("scan", {}), "state": "partial",
+                  "error": record.get("scan", {}).get("error", "No final scan receipt. Only retained evidence is shown.")}}
+    name = "partial-report.html" if partial_snapshot else "reviewed-report.html" if record.get("review") else "report.html"
+    if not partial_snapshot:
         try:
-            store.write_bytes(run_id, name, render(record, baseline).encode())
-        except FileExistsError:
+            return store.published_report(run_id, name)
+        except FileNotFoundError:
             pass
-        return str(store.root / run_id / name)
+    baseline = None
+    if record["result"].get("baseline"):
+        try:
+            baseline = store.inspect(record["result"]["baseline"])
+        except FileNotFoundError:
+            pass
+    try:
+        store.write_bytes(run_id, name, render(record, baseline).encode())
+    except FileExistsError:
+        pass
+    return store.published_report(run_id, name)
 
 
 def screenshot(step, viewport, notes=(), *, image_id=None, zoom=False):
@@ -507,7 +518,10 @@ def render(record, baseline=None):
     decision_html = ''.join(f'<article class="decision"><span class="label">Recommendation {n:02}</span><a href="#note-{n}">{esc(note["title"])}</a></article>' for n,note in decisions)
     cover_notice = '<p class="callout warning">Synthetic installation test. This is not a review of a real business.</p>' if fixture else ''
     if record.get("scan", {}).get("state") in ("partial", "cancelled") or result.get("state") not in (None,"complete"):
-        cover_notice += '<p class="callout warning">This review has incomplete coverage. Read the method and limitations before acting.</p>'
+        detail = record.get("scan", {}).get("error") or record.get("scan", {}).get("context_error")
+        if not detail and record.get("scan", {}).get("context_state") in ("partial", "interrupted", "cancelled"):
+            detail = "AI answers or alternative comparisons have incomplete source support."
+        cover_notice += '<p class="callout warning"><strong>Partial report.</strong> This review has incomplete coverage. ' + esc(detail or "Read the method and limitations before acting.") + '</p>'
     assessment = review.get("assessment", [])
     metrics = [(page_count, 'Pages examined'), (len(journeys), 'Journey summaries'),
                (issues if review else '—', 'Observed issues'), (shot_count, 'Captured screenshots')]

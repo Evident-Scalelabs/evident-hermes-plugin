@@ -234,12 +234,12 @@ async def _cleanup_browser(context, browser, resource_tasks, disconnect):
     return issues
 
 
-async def observe_browser(store, plan, origins, fixture_origin="", baseline=None, change_context="", *, browser_server_url="", next_steps=None, read_data=False, native_browser=False, hosted_browser=False):
+async def observe_browser(store, plan, origins, fixture_origin="", baseline=None, change_context="", *, browser_server_url="", next_steps=None, read_data=False, native_browser=False, hosted_browser=False, run_id=None):
     from playwright.async_api import async_playwright, Error as BrowserError, TimeoutError as BrowserTimeout
     plan = validate_browser_plan(plan)
     browser_server_url = validate_browser_server_url(browser_server_url)
     with store.lease(), tempfile.TemporaryDirectory(prefix="evident-browser-") as browser_home:
-        run_id = store.create(plan)
+        run_id = run_id or store.create(plan)
         started = now()
         deadline = time.monotonic() + plan["limits"]["seconds"]
         requests, steps = [], []

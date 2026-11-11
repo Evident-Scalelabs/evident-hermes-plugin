@@ -66,7 +66,7 @@ def register_commands(ctx, make_store, scope):
         repeat.add_argument("--saved", action="store_true", help="Interpret the identifier as a saved business-claim test")
         repeat.add_argument("--change", required=True)
         view = actions.add_parser("view", help="Export retained screenshots and evidence as offline HTML")
-        view.add_argument("run_id")
+        view.add_argument("run_id", help="Exact run ID or requested website URL")
         explanation = actions.add_parser("explain", help="Send bounded retained text to the configured host model with explicit consent")
         explanation.add_argument("run_id")
         explanation.add_argument("--consent", action="store_true", help="Consent to host-model processing and possible model cost")
@@ -89,7 +89,13 @@ def register_commands(ctx, make_store, scope):
             ctx.set_config("authorized_origins", list(dict.fromkeys([*origins, origin])))
             return {"authorized_origin": origin, "network": "Anonymous read-only requests only"}
         if args.action == "view":
-            return {"view": export(args.run_id), "summary": make_store().inspect(args.run_id).get("review", {}).get("summary", "Retained website screenshots and evidence.")}
+            from .recovery import inspect_run
+            retained = make_store()
+            run_id = retained.latest_scan(args.run_id) if args.run_id.startswith("https://") else args.run_id
+            value = inspect_run(retained, run_id)
+            if not value.get("summary"):
+                value["summary"] = value.get("detail", "Retained website evidence.")
+            return value
         if args.action == "explain":
             return json.loads(await asyncio.to_thread(ctx.dispatch_tool, "evident_explain", {"run_id": args.run_id, "consent": args.consent}))
         if args.action == "verify":
@@ -124,6 +130,8 @@ def register_commands(ctx, make_store, scope):
         setup(parser)
         try:
             tokens = shlex.split(raw)
+            if not tokens:
+                return "Let’s look through Evident. Which website should I review? You can give me a buyer’s decision or ask for a general read."
             if tokens and tokens[0].startswith("https://"):
                 tokens.insert(0, "scan")
             args=parser.parse_args(tokens)

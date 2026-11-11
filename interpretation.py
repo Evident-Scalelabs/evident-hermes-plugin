@@ -3,6 +3,7 @@ from pathlib import Path
 """Optional host-mediated explanation of retained observations; no evaluation rubric."""
 from dataclasses import asdict
 import json
+import asyncio
 import sqlite3
 
 from .evidence import now, screenshot_data
@@ -129,12 +130,10 @@ async def review_capture(ctx, store, run_id, receipt):
     return response.parsed
 
 
-async def scan_report(ctx, store, url, objective=None, *, max_pages=None, seconds=None, context=True):
+async def scan_report(ctx, store, url, objective=None, *, max_pages=None, seconds=None, context=True, tool_budget=None):
     """One explicit user request → bounded capture → host vision → one report."""
-    import asyncio
     from .browser import observe_browser
     from .commands import browser_plan
-    from .report import export_report
     from .journey import JourneyPlanner, PLANNING_CALLS
     if ctx.get_config("browser_enabled", default=False) is not True:
         raise ValueError("Enable browser_enabled in plugin settings for website reports")
@@ -143,7 +142,6 @@ async def scan_report(ctx, store, url, objective=None, *, max_pages=None, second
     with store.history() as history:
         remembered = history.recall(url)
         saved_goal = next((i["value"] for i in remembered["items"] if i["kind"] == "goal"), None)
-        previous = history.previous(url)
     explicit_objective = objective is not None
     if objective is None:
         goals = [i["value"] for i in remembered["items"] if i["kind"] == "goal" and i["source_available"]]
@@ -156,77 +154,142 @@ async def scan_report(ctx, store, url, objective=None, *, max_pages=None, second
     seconds = ctx.get_config("review_seconds", default=600) if seconds is None else seconds
     if type(max_pages) is not int or not 2 <= max_pages <= 12 or type(seconds) is not int or not 60 <= seconds <= 900:
         raise ValueError("Review budgets require 2–12 pages and 60–900 seconds")
-    resolved, origin, redirects = await resolve_scan_url(url)
     configured = ctx.get_config("authorized_origins", default=[])
     if not isinstance(configured, list) or len(configured)>10 or any(not isinstance(v,str) for v in configured):
         raise ValueError("Invalid authorized origins")
-    if explicit_objective and objective != saved_goal:
-        with store.history() as history:
-            history.remember(url, "goal", "goal", objective)
-            remembered = history.recall(url)
-    origins = list(dict.fromkeys([origin,*configured]))
-    plan = browser_plan(resolved, "")
+    # The clock starts before network work. Leave the host time to serialize and deliver the result.
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + tool_budget if tool_budget is not None else None
+    plan = browser_plan(url, "")
     plan["objective"] = objective
-    plan["limits"].update(seconds=seconds,resources=400)
-    plan["steps"] = [{"action":"open","url":resolved,"assertions":[],"purpose":"Understand the starting page and discover relevant visitor paths","expected":"Inspect the actual offer, links and evidence available to a visitor"}]
-    planner = JourneyPlanner(ctx,store,objective,max_pages)
-    planner.site_context = {"items": [item for item in remembered["items"] if item["source_available"]],
-                            "prior_runs": [run for run in remembered["runs"] if run["source_available"]],
-                            "authority": "User-stated context and dated history. Reassess against fresh evidence; these are not current website observations."}
-    result = await observe_browser(store,plan,origins,browser_server_url=ctx.get_config("browser_server_url",default=""), next_steps=planner, read_data=True, native_browser=ctx.get_config("reuse_hermes_browser",default=True), hosted_browser=ctx.get_config("allow_hosted_browser",default=False))
-    run_id = result["run_id"]
-    history_issue = None
-    store.write(run_id, "site-context.json", {**remembered, "objective": objective,
-                "objective_reused": not explicit_objective and any(i["kind"] == "goal" and i["source_available"] and i["value"] == objective for i in remembered["items"]),
-                "previous_run": previous["run_id"] if previous else None})
-    receipt = {"method": "url-to-journey-report.v6", "show_evident_cta":ctx.get_config("show_evident_cta",default=True) is True, "review_mode": "general" if objective == DEFAULT_OBJECTIVE else "goal_focused", "check_version": CHECK_VERSION, "requested_url": url, "capture_url": resolved, "redirects": redirects,
+    plan["limits"].update(seconds=seconds, resources=400)
+    plan["steps"] = [{"action":"open","url":url,"assertions":[],"purpose":"Understand the starting page and discover relevant visitor paths","expected":"Inspect the actual offer, links and evidence available to a visitor"}]
+    receipt = {"method": "url-to-journey-report.v6", "show_evident_cta":ctx.get_config("show_evident_cta",default=True) is True,
+               "review_mode": "general" if objective == DEFAULT_OBJECTIVE else "goal_focused",
+               "check_version": CHECK_VERSION, "requested_url": url, "requested_context": context, "started": now(),
                "consent": "Explicit website report request with operator model opt-in",
                "coverage": "Selected pages and visitor paths from observed links, headings and supported local controls; unvisited routes, account actions, external boundaries and real visitor outcomes remain outside coverage",
                "budgets":{"pages":max_pages,"capture_and_planning_seconds":seconds,"planning_calls":PLANNING_CALLS,"steps":24},
-               "exploration":planner.receipts,"stop_reason":planner.stop,
-               "model_input": "Bounded retained text, measured element geometry, actual navigation trace and retained images across the selected pages",
-               "site_context": planner.site_context, "state": "pending"}
-    try:
-        if result["state"] == "cancelled":
-            raise asyncio.CancelledError
-        receipt["control_investigation"] = planner.coverage(store.inspect(run_id)["steps"])
-        review = await review_capture(ctx, store, run_id, receipt)
-        summary = review["summary"]
-        path = None
-    except asyncio.CancelledError:
-        receipt.update(state="cancelled", error="Report request cancelled; captured evidence retained")
-        store.write(run_id, "scan.json", receipt)
-        raise
-    except Exception as exc:
-        receipt.update(state="partial", error=str(exc)[:500] if isinstance(exc, ValueError) else type(exc).__name__)
-        summary = "Website evidence was retained, but the annotated review could not finish: " + receipt["error"]
-        path = None
-    if context and "error" not in receipt:
-        from .contextual import collect
+               "model_input": "Bounded retained text, measured element geometry, actual navigation trace and retained images across the selected pages"}
+    with store.lease():
+        run_id = store.create(plan)
+        store.write(run_id, "scan-request.json", {**receipt, "objective": objective})
+    planner = JourneyPlanner(ctx, store, objective, max_pages)
+    with store.run_lease(run_id):
         try:
-            with store.lease():
-                enrichment = await collect(ctx, store, run_id, previous=previous, memory=remembered)
-            receipt["context_state"] = enrichment["state"]
-            if enrichment["state"] != "complete":
-                receipt["state"] = "partial"
-                summary += " AI-answer/alternative context is incomplete; the website review is retained."
+            async with asyncio.timeout_at(deadline):
+                resolved, origin, redirects = await resolve_scan_url(url)
+                receipt.update(capture_url=resolved, redirects=redirects)
+                with store.history() as history:
+                    if explicit_objective and objective != saved_goal:
+                        history.remember(url, "goal", "goal", objective)
+                    remembered = history.recall(url)
+                    previous = history.previous(url)
+                store.write(run_id, "site-context.json", {**remembered, "objective": objective,
+                    "objective_reused": not explicit_objective and any(i["kind"] == "goal" and i["source_available"] and i["value"] == objective for i in remembered["items"]),
+                    "previous_run": previous["run_id"] if previous else None})
+                planner.site_context = {"items": [item for item in remembered["items"] if item["source_available"]],
+                    "prior_runs": [run for run in remembered["runs"] if run["source_available"]],
+                    "authority": "User-stated context and dated history. Reassess against fresh evidence; these are not current website observations."}
+                plan["steps"][0]["url"] = resolved
+                if deadline is not None:
+                    # Reserve the vision call (up to 120 s) and browser cleanup inside this tool dispatch.
+                    plan["limits"]["seconds"] = min(seconds, max(1, int(deadline-loop.time()-140)))
+                    receipt["budgets"]["effective_capture_seconds"] = plan["limits"]["seconds"]
+                result = await observe_browser(store, plan, list(dict.fromkeys([origin,*configured])),
+                    browser_server_url=ctx.get_config("browser_server_url",default=""), next_steps=planner, read_data=True,
+                    native_browser=ctx.get_config("reuse_hermes_browser",default=True),
+                    hosted_browser=ctx.get_config("allow_hosted_browser",default=False), run_id=run_id)
+                if result["state"] == "cancelled":
+                    raise asyncio.CancelledError
+                receipt.update(exploration=planner.receipts, stop_reason=planner.stop, site_context=planner.site_context)
+                receipt["control_investigation"] = planner.coverage(store.inspect(run_id)["steps"])
+                await review_capture(ctx, store, run_id, receipt)
         except asyncio.CancelledError:
-            receipt["context_state"] = "cancelled"
+            receipt.update(state="cancelled", error="Review cancelled. Inspect this run for the retained evidence.")
             store.write(run_id, "scan.json", receipt)
             raise
+        except Exception as exc:
+            record = store.inspect(run_id)
+            receipt.update(state="partial" if record["steps"] else "failed",
+                error=("Website stage reached its time limit." if isinstance(exc, TimeoutError) else
+                       str(exc)[:500] if isinstance(exc, ValueError) else type(exc).__name__))
+        if context and "error" not in receipt:
+            store.write(run_id, "website-review.json", receipt)
+        else:
+            receipt["context_state"] = "not_checked" if context else "not_requested"
+            return finalize_scan(store, run_id, receipt)
+    if tool_budget is not None:
+        return {"state": "awaiting_context", "run_id": run_id, "pages_observed": receipt.get("pages_observed", 0),
+                "next_tool": {"name": "evident_finish", "arguments": {"run_id": run_id}},
+                "instruction": "Website review saved. Call evident_finish now for the already-requested AI answers and alternatives. Deliver its single report."}
+    return await finish_scan(ctx, store, run_id)
+
+
+def chat_work_budget():
+    """Use the mounted Hermes dispatch settings when available; keep a delivery margin."""
     try:
-        with store.history() as history:
-            saved = history.record_run(url, {**store.inspect(run_id), "scan": receipt}, remembered["comparison_revision"])
-        receipt["history_state"] = "saved" if saved else "context_changed_during_review"
-    except sqlite3.Error as exc:
-        history_issue = type(exc).__name__
-    if history_issue:
-        receipt.update(history_state="unavailable", history_error=history_issue)
-        summary += " Site history could not be updated; the report is retained."
+        from agent.deadline import resolve_timeout
+    except ImportError:
+        limit = 420
+    else:
+        batch = resolve_timeout("tools.concurrent_batch", default=420, env_var="HERMES_CONCURRENT_TOOL_TIMEOUT_S")
+        single = resolve_timeout("tools.sequential_call", default=batch)
+        limit = min(value for value in (batch, single, 420) if value is not None and value > 0)
+    return max(0.01, limit - min(40, limit / 4))
+
+
+async def finish_scan(ctx, store, run_id, tool_budget=None):
+    """Continue only a requested context stage, consuming each paid attempt at most once."""
+    from .contextual import collect
+    from .recovery import report_result
+    with store.run_lease(run_id):
+        record = store.inspect(run_id)
+        if "scan" in record:
+            return report_result(store, record)
+        receipt = record.get("website_review")
+        if not receipt or not record.get("request", {}).get("requested_context"):
+            raise ValueError("There is no requested comparison to continue. Inspect the retained run.")
+        if ctx.get_config("allow_model_interpretation", default=False) is not True:
+            raise ValueError("Model processing is disabled. Inspect the run to get its website-only evidence.")
+        memory = record["site_context"]
+        enrichment = record.get("context")
+        if enrichment is None and store.optional(run_id, "context-started.json") is None:
+            previous = None
+            if memory.get("previous_run"):
+                try:
+                    previous = store.inspect(memory["previous_run"])
+                except FileNotFoundError:
+                    pass
+            with store.lease():
+                store.write(run_id, "context-started.json", {"started": now()})
+                try:
+                    async with asyncio.timeout(tool_budget):
+                        enrichment = await collect(ctx, store, run_id, previous=previous, memory=memory)
+                except asyncio.CancelledError:
+                    receipt.update(state="cancelled", context_state="cancelled", error="Comparison cancelled; retained evidence is available.")
+                    store.write(run_id, "scan.json", receipt)
+                    raise
+                except Exception as exc:
+                    receipt["context_error"] = "Comparison time limit reached" if isinstance(exc, TimeoutError) else type(exc).__name__
+                    enrichment = store.optional(run_id, "context.json")
+        receipt["context_state"] = (enrichment or {}).get("state", "interrupted")
+        if receipt["context_state"] != "complete":
+            receipt["state"] = "partial"
+        return finalize_scan(store, run_id, receipt)
+
+
+def finalize_scan(store, run_id, receipt):
+    from .recovery import report_result
+    record = store.inspect(run_id)
+    record["scan"] = receipt
+    memory = record.get("site_context")
+    if memory:
+        try:
+            with store.history() as history:
+                saved = history.record_run(receipt["requested_url"], record, memory["comparison_revision"])
+            receipt["history_state"] = "saved" if saved else "context_changed_during_review"
+        except sqlite3.Error:
+            receipt["history_state"] = "unavailable"
     store.write(run_id, "scan.json", receipt)
-    # Export only one deliverable; partial work is explicitly labelled, not substituted silently.
-    path = path or export_report(store, run_id)
-    return {"state": receipt["state"], "run_id": run_id, "summary": summary,
-            "review_complete": "error" not in receipt, "context_state":receipt.get("context_state","not_requested"), "view": path, "report_path": path,
-            "delivery": "MEDIA:" + path, "observed_steps": result["observed_steps"],
-            "pages_observed":receipt.get("pages_observed",0), "screenshots":receipt.get("screenshots",0)}
+    return report_result(store, record)

@@ -258,7 +258,7 @@ class AutomaticReportTests(unittest.IsolatedAsyncioTestCase):
                 return SimpleNamespace(parsed=review, text=json.dumps(review), provider="mock", model="mock", usage=Usage())
         ctx = SimpleNamespace(get_config=lambda key, **kw: True if key in ("browser_enabled","allow_model_interpretation") else kw.get("default"), llm=Model())
         async def capture(store, plan, origins, **kwargs):
-            run = store.create(plan)
+            run = kwargs["run_id"]
             for index in range(5):
                 store.write(run, f"step-{index}.json", {"index":index,"state":"observed","source_text":"Office hours", "assertions":[],
                     "fetched_url":"https://example.com/", "document_status":http_status, "screenshot_png":"" if missing_image and index==0 else "iVBORw0KGgo=", "elements":[{"text":"Office hours","x":1,"y":1,"width":10,"height":10}]})
