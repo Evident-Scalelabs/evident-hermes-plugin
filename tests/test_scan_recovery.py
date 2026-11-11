@@ -23,9 +23,9 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name).resolve()
         self.store = Store(self.root)
-        self.tools, self.hooks, self.sections = {}, {}, {}
+        self.tools, self.hooks, self.sections, self.schemas = {}, {}, {}, {}
         ctx = SimpleNamespace(
-            register_tool=lambda **t: self.tools.update({t["name"]: t["handler"]}),
+            register_tool=lambda **t: (self.tools.update({t["name"]: t["handler"]}), self.schemas.update({t["name"]: t["schema"]})),
             register_hook=lambda name, fn: self.hooks.update({name: fn}),
             register_system_prompt_section=lambda name, content: self.sections.update({name: content}),
             register_command=lambda *a, **kw: None, register_cli_command=lambda *a, **kw: None,
@@ -51,6 +51,7 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
 
     def test_routing_intake_and_no_actions(self):
         self.assertIn(INTAKE, self.sections.values())
+        self.assertEqual(self.schemas["evident_finish"]["parameters"]["required"], ["run_id"])
         hook = self.hooks["pre_llm_call"]
         for message in ("Is this evident?", "Is my website evident?", "Evident, review this: " + URL):
             self.assertEqual(hook(user_message=message, conversation_history=["We discussed ParlayTix."]), {"context": INTAKE})

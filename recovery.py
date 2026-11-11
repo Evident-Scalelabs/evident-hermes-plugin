@@ -85,6 +85,9 @@ def _inspect_snapshot(store, run_id, active, include_record):
             value["next_tool"] = {"name": "evident_finish", "arguments": {"run_id": run_id}}
         if is_scan:
             value["findings"] = [n["title"] for n in record.get("review", {}).get("notes", [])[:3]]
+            if (record.get("context", {}).get("plan") or {}).get("competitors"):
+                value["competitor_page"] = {"tool": "evident_finish", "arguments": {"run_id": run_id, "competitors": True},
+                    "use": "Only when the user asks to expand the saved competitor page; reuses retained sources."}
             if not include_record:
                 return value
     else:

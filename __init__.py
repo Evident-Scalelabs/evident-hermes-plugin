@@ -20,7 +20,9 @@ INTAKE = (
     'A mere mention or an identity question such as “Are you Hermes or Evident?” needs no scan. '
     'A bare invitation never authorizes a model review. For a requested review use evident_scan once. '
     'Follow its next_tool in the same turn, then give the exact MEDIA: delivery on its own line. '
-    'After timeout inspect by run ID or exact URL. Do not repeat a scan to retrieve a report.'
+    'After timeout inspect by run ID or exact URL. Do not repeat a scan to retrieve a report. '
+    'To expand a saved report’s competitor page, inspect its URL, then call evident_finish with that run_id '
+    'and competitors=true. This uses retained sources and one model call. Deliver its updated report.'
 )
 
 
@@ -276,7 +278,7 @@ def register(ctx):
     ]
     for name, handler, is_async, description, properties in definitions:
         ctx.register_tool(name=name, toolset="evident_evidence", schema={"name": name, "description": description,
-            "parameters": {"type": "object", "properties": properties, "required": {"evident_scan": ["url"], "evident_inspect": [], "evident_memory": ["action", "url"], "evident_verify": ["change_context"]}.get(name, list(properties)), "additionalProperties": False}},
+            "parameters": {"type": "object", "properties": properties, "required": {"evident_scan": ["url"], "evident_finish": ["run_id"], "evident_inspect": [], "evident_memory": ["action", "url"], "evident_verify": ["change_context"]}.get(name, list(properties)), "additionalProperties": False}},
             handler=handler, is_async=is_async)
     ctx.register_skill("evidence-diagrams", Path(__file__).parent / "skills" / "evidence-diagrams" / "SKILL.md")
     ctx.register_skill("evidence-loop", Path(__file__).parent / "skills" / "evidence-loop" / "SKILL.md")
