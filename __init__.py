@@ -101,8 +101,11 @@ def register(ctx):
                 from .contextual import review_competitors
                 from .recovery import report_result
                 retained = store()
-                await review_competitors(ctx, retained, args["run_id"])
-                return json.dumps(report_result(retained, retained.inspect(args["run_id"])))
+                analysis = await review_competitors(ctx, retained, args["run_id"])
+                result = report_result(retained, retained.inspect(args["run_id"]))
+                result["competitor_page_state"] = analysis["state"]
+                result["summary"] = analysis.get("comparison", {}).get("summary", "The retained sources did not establish a competitor comparison.")
+                return json.dumps(result)
             return json.dumps(await finish_scan(ctx, store(), args["run_id"], chat_work_budget()))
         except BlockingIOError:
             return json.dumps({"state": "running", "run_id": args["run_id"], "detail": "This run has an active writer. Inspect it again without starting a new scan."})
