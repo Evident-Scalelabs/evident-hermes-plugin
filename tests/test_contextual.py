@@ -352,3 +352,13 @@ class CompetitorPageTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result["comparison"]["competitors"],[])
             html=Path(export_report(store,bad)).read_text()
             self.assertNotIn("Test a clear service-hours note before the next step.",html.split('id="alternatives"')[1].split('id="coverage"')[0])
+            fallback=store.create(plan("https://site.example/"))
+            preserved=copy.deepcopy(payload["competitors"][0])
+            preserved["source_quote"]="Open daily"
+            context["comparison"]={"competitors":[preserved]}
+            for name in ("result.json","step-0.json"):
+                store.write(fallback,name,store.read(run,name))
+            store.write(fallback,"context.json",context)
+            kept=await review_competitors(ctx,store,fallback)
+            self.assertEqual(kept["state"],"partial")
+            self.assertEqual(kept["comparison"]["competitors"],[preserved])

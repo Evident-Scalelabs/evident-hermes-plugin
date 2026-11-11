@@ -406,7 +406,11 @@ async def review_competitors(ctx, store, run_id):
                     accepted.append(row)
                 except ValueError as exc:
                     value["issues"].append(str(exc))
-            value["comparison"]={**response.parsed,"competitors":accepted}
+            retained={row["index"]:row for row in (context.get("comparison") or {}).get("competitors",[])}
+            for row in accepted:
+                if row["source_quote"] or row["index"] not in retained:
+                    retained[row["index"]]=row
+            value["comparison"]={**response.parsed,"competitors":list(retained.values())}
             value["state"]="complete" if len(accepted)==len(candidates) and not value["issues"] else "partial"
         except ValueError as exc:
             value["issues"].append(str(exc))
