@@ -8,6 +8,16 @@ from urllib.parse import urlsplit, urldefrag
 from .evidence import screenshot_data
 from .checks import CHECK_BY_ID, CHECK_VERSION, CHECKS, OUTCOMES
 
+BRAND_MARK = '<span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>'
+BRAND = '<span class="brand">' + BRAND_MARK + 'EVIDENT</span>'
+
+
+def report_sheet(anchor, label, body, issued, number, css=""):
+    return f'''<section class="sheet {css}" id="{anchor}" aria-label="{esc(label)}" data-page="{number}">
+        <aside class="rail" aria-hidden="true">{BRAND_MARK}<span class="rail-name">Evident · {esc(label)}</span><span class="rail-number">{number:02}</span></aside>
+        <div class="sheet-body"><div class="kicker">{BRAND}<span>{esc(label)} / {esc(issued)}</span></div>{body}
+        <footer class="sheet-foot"><span>{number:02}</span><span>Report by <a href="https://evident.so/" target="_blank" rel="noopener noreferrer">evident.so</a> · {esc(issued)}</span></footer></div></section>'''
+
 REVIEW_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["summary", "notes", "limitations"], "properties": {
         "summary": {"type": "string", "maxLength": 2000}, "limitations": {"type": "string", "maxLength": 2000},
         "notes": {"type": "array", "minItems": 0, "maxItems": 8, "items": {"type": "object", "additionalProperties": False,
@@ -244,6 +254,8 @@ def export_report(store, run_id, *, record=None):
         name = "reviewed-report-v3.html"  # Preserve previously delivered HTML while serving the clearer presentation.
         if record.get("competitor_review"):
             name = "reviewed-report-competitors.html"
+    if record.get("demo"):
+        name = "demo-report-v2.html"
     if not partial_snapshot:
         try:
             return store.published_report(run_id, name)
@@ -503,15 +515,11 @@ def render(record, baseline=None):
     blocked = [r for r in result.get("requests", []) if r.get("state") not in ("captured", "redirected")]
     omitted = result.get("requests_blocked_after_limit", 0)
     sections, pictured = [], set()
-    mark = '<span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>'
-    brand = '<span class="brand">' + mark + 'EVIDENT</span>'
+    brand = BRAND
 
     def sheet(anchor, label, body, css=""):
         number = len(sections) + 1
-        sections.append(f'''<section class="sheet {css}" id="{anchor}" aria-label="{esc(label)}" data-page="{number}">
-        <aside class="rail" aria-hidden="true">{mark}<span class="rail-name">Evident · {esc(label)}</span><span class="rail-number">{number:02}</span></aside>
-        <div class="sheet-body"><div class="kicker">{brand}<span>{esc(label)} / {esc(issued)}</span></div>{body}
-        <footer class="sheet-foot"><span>{number:02}</span><span>Report by <a href="https://evident.so/" target="_blank" rel="noopener noreferrer">evident.so</a> · {esc(issued)}</span></footer></div></section>''')
+        sections.append(report_sheet(anchor, label, body, issued, number, css))
 
     def heading(kicker, main, detail=""):
         return f'<header class="section-head"><p class="eyebrow">{esc(kicker)}</p><h2>{main}</h2>' + (f'<p>{esc(detail)}</p>' if detail else '') + '</header>'

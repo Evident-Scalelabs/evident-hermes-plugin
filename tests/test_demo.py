@@ -49,6 +49,10 @@ class DemoTests(unittest.TestCase):
         html = render(after, before)
         self.assertIn('3 / 3', html)
         self.assertEqual(html.count('class="demo-card"'), 3)
+        self.assertEqual(html.count('class="rail"'), 5)
+        self.assertIn('class="report demo-report"', html)
+        self.assertIn('class="brand-mark"', html)
+        self.assertIn('class="sheet-foot"', html)
         self.assertIn('model finding unavailable', html)
         after['result']['environment']['version'] = 'different'
         after['result']['verification'] = compare(before, after)
