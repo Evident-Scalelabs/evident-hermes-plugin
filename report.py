@@ -8,6 +8,16 @@ from urllib.parse import urlsplit, urldefrag
 from .evidence import screenshot_data
 from .checks import CHECK_BY_ID, CHECK_VERSION, CHECKS, OUTCOMES
 
+BRAND_MARK = '<span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>'
+BRAND = '<span class="brand">' + BRAND_MARK + 'EVIDENT</span>'
+
+
+def report_sheet(anchor, label, body, issued, number, css=""):
+    return f'''<section class="sheet {css}" id="{anchor}" aria-label="{esc(label)}" data-page="{number}">
+        <aside class="rail" aria-hidden="true">{BRAND_MARK}<span class="rail-name">Evident · {esc(label)}</span><span class="rail-number">{number:02}</span></aside>
+        <div class="sheet-body"><div class="kicker">{BRAND}<span>{esc(label)} / {esc(issued)}</span></div>{body}
+        <footer class="sheet-foot"><span>{number:02}</span><span>Report by <a href="https://evident.so/" target="_blank" rel="noopener noreferrer">evident.so</a> · {esc(issued)}</span></footer></div></section>'''
+
 REVIEW_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["summary", "notes", "limitations"], "properties": {
         "summary": {"type": "string", "maxLength": 2000}, "limitations": {"type": "string", "maxLength": 2000},
         "notes": {"type": "array", "minItems": 0, "maxItems": 8, "items": {"type": "object", "additionalProperties": False,
@@ -80,7 +90,7 @@ STYLE += """
 
 STYLE += """
 /* Original evidence exhibits: categorical relationships, never invented scores. */
-.exhibit{margin:24px 0;padding:24px;background:#edf2fb;border-radius:4px;border:1px solid #d6e0f2}.exhibit figcaption{font:600 15px/1.4 var(--sans);margin-bottom:22px}.exhibit figcaption .label{color:var(--blue)}.exhibit-nodes{display:flex;align-items:stretch;gap:38px}.exhibit-node{position:relative;flex:1;min-width:0;padding:20px 18px;background:white;border-top:4px solid var(--blue)}.exhibit-node+.exhibit-node:before{content:'→';position:absolute;left:-30px;top:35%;color:var(--blue);font:26px var(--serif)}.exhibit.contrast .exhibit-node+.exhibit-node:before{content:'↔'}.exhibit.contrast .exhibit-node:nth-child(even){border-top-color:var(--warn)}.exhibit-node.proposed{border:2px dashed var(--purple);border-top-width:4px}.exhibit-node .node-text{font:28px/1.16 var(--serif);letter-spacing:-.025em;margin:12px 0 16px}.exhibit-node a{font:10px var(--mono);margin-right:10px}.exhibit .caveat{margin:16px 0 0}.compact-action{padding:17px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:90px 1fr;gap:18px}.compact-action p{margin:0;font-size:15px}.compact-action .label{margin:4px 0 0}.note-head h2{font-size:29px}.capture-head h3{font-size:13px}.capture-head .source{margin-bottom:6px}.route-stations{list-style:none;margin:22px 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}.route-station{position:relative;min-width:0;border-top:2px solid var(--blue);padding:15px 8px 8px 0}.route-station:before{content:'';position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--blue)}.route-station:not(:last-child):after{content:'→';position:absolute;right:-22px;top:-15px;color:var(--blue);font:22px var(--sans)}.route-station a{font:600 13px/1.4 var(--sans);display:block;overflow-wrap:anywhere;text-decoration:none}.route-station .label{font-size:9px}.state-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.state-chips a{font:9px var(--mono);border:1px solid #cbd5ed;background:#fff;padding:4px 6px}.journey{padding:20px 0}.journey h3{font-size:17px}.journey .badge{float:right;margin:0 0 8px 12px}.journey p{font-size:13px;max-width:80ch}.evidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:24px 0}.evidence-thumb{border:1px solid var(--line);background:white;color:var(--ink);text-decoration:none;padding:8px;min-width:0}.evidence-thumb svg{display:block;width:100%;height:140px;background:var(--soft);border-bottom:1px solid var(--line)}.evidence-thumb span{font:10px/1.4 var(--mono);display:block;margin-top:8px;overflow-wrap:anywhere}.evidence-detail>summary{font-size:13px}.evidence-detail>.capture{margin-top:0}.answer-card .exhibit-nodes{gap:24px}.answer-card .exhibit-node{padding:12px;border-top-width:2px;background:var(--soft)}.answer-card .exhibit-node+.exhibit-node:before{left:-21px;font-size:19px}.answer-card .node-text{font:20px/1.25 var(--serif)}.alignment-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:22px 0}.alignment-cell{padding:14px 12px;border-top:5px solid #94a3b8;background:var(--soft);font:10px/1.5 var(--mono);text-decoration:none;color:var(--ink)}.alignment-cell.tension{border-color:#d97706}.alignment-cell.omission{border-color:var(--purple)}.alignment-cell.consistent{border-color:var(--cyan)}.alignment-cell b{display:block;font-size:12px;margin:6px 0}.answer-grid{margin-top:16px}.answer-card h3{font-size:16px}.answer-card .next-action{padding:10px 12px}.answer-card .source{margin:10px 0}.rival-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rival-card{min-width:0;border:1px solid var(--line);padding:20px;background:white}.rival-card h3{font:26px/1.2 var(--serif);margin:10px 0 16px}.rival-comparison{position:relative;padding:0 0 0 18px;border-left:2px solid var(--purple);margin:20px 0}.rival-comparison>div{position:relative;margin:20px 0}.rival-comparison>div:before{content:'';position:absolute;width:8px;height:8px;left:-23px;top:4px;border-radius:50%;background:var(--purple)}.rival-comparison p{font-size:14px;line-height:1.4;margin:0}.rival-card .difference{font-size:13px;color:var(--sub)}.cover .standfirst{max-width:55ch}.report .stats{margin:22px 0}.overview-goal{font-size:12px;color:var(--sub)}.ai-sheet{border-top:5px solid var(--purple)}.method-summary{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.method-summary span{border-left:3px solid var(--cyan);padding:8px 14px;background:var(--soft);font-size:12px}
+.exhibit{margin:24px 0;padding:24px;background:#edf2fb;border-radius:4px;border:1px solid #d6e0f2}.exhibit figcaption{font:600 15px/1.4 var(--sans);margin-bottom:22px}.exhibit figcaption .label{color:var(--blue)}.exhibit-nodes{display:flex;align-items:stretch;gap:38px}.exhibit-node{position:relative;flex:1;min-width:0;padding:20px 18px;background:white;border-top:4px solid var(--blue)}.exhibit-node+.exhibit-node:before{content:'→';position:absolute;left:-30px;top:35%;color:var(--blue);font:26px var(--serif)}.exhibit.contrast .exhibit-node+.exhibit-node:before{content:'↔'}.exhibit.contrast .exhibit-node:nth-child(even){border-top-color:var(--warn)}.exhibit-node.proposed{border:2px dashed var(--purple);border-top-width:4px}.exhibit-node .node-text{font:28px/1.16 var(--serif);letter-spacing:-.025em;margin:12px 0 16px}.exhibit-node a{font:10px var(--mono);margin-right:10px}.exhibit .caveat{margin:16px 0 0}.compact-action{padding:17px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:90px 1fr;gap:18px}.compact-action p{margin:0;font-size:15px}.compact-action .label{margin:4px 0 0}.note-head h2{font-size:29px}.capture-head h3{font-size:13px}.capture-head .source{margin-bottom:6px}.route-stations{list-style:none;margin:22px 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}.route-station{position:relative;min-width:0;border-top:2px solid var(--blue);padding:15px 8px 8px 0}.route-station:before{content:'';position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--blue)}.route-station:not(:last-child):after{content:'→';position:absolute;right:-22px;top:-15px;color:var(--blue);font:22px var(--sans)}.route-station a{font:600 13px/1.4 var(--sans);display:block;overflow-wrap:anywhere;text-decoration:none}.route-station .label{font-size:9px}.state-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.state-chips a{font:9px var(--mono);border:1px solid #cbd5ed;background:#fff;padding:4px 6px}.journey{padding:20px 0}.journey h3{font-size:17px}.journey .badge{float:right;margin:0 0 8px 12px}.journey p{font-size:13px;max-width:80ch}.evidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:24px 0}.evidence-thumb{border:1px solid var(--line);background:white;color:var(--ink);text-decoration:none;padding:8px;min-width:0}.evidence-thumb svg{display:block;width:100%;height:140px;background:var(--soft);border-bottom:1px solid var(--line)}.evidence-thumb span{font:10px/1.4 var(--mono);display:block;margin-top:8px;overflow-wrap:anywhere}.evidence-detail>summary{font-size:13px}.evidence-detail>.capture{margin-top:0}.answer-card .exhibit-nodes{gap:24px}.answer-card .exhibit-node{padding:12px;border-top-width:2px;background:var(--soft)}.answer-card .exhibit-node+.exhibit-node:before{left:-21px;font-size:19px}.answer-card .node-text{font:20px/1.25 var(--serif)}.alignment-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:22px 0}.alignment-cell{padding:14px 12px;border-top:5px solid #94a3b8;background:var(--soft);font:10px/1.5 var(--mono);text-decoration:none;color:var(--ink)}.alignment-cell.tension{border-color:#d97706}.alignment-cell.omission{border-color:var(--purple)}.alignment-cell.consistent{border-color:var(--cyan)}.alignment-cell b{display:block;font-size:12px;margin:6px 0}.answer-grid{margin-top:16px}.answer-card h3{font-size:16px}.answer-card .next-action{padding:10px 12px}.answer-card .source{margin:10px 0}.rival-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rival-card{min-width:0;border:1px solid var(--line);padding:20px;background:white}.rival-card h3{font:26px/1.2 var(--serif);margin:10px 0 16px}.rival-comparison{position:relative;padding:0 0 0 18px;border-left:2px solid var(--purple);margin:20px 0}.rival-comparison>div{position:relative;margin:20px 0}.rival-comparison>div:before{content:'';position:absolute;width:8px;height:8px;left:-23px;top:4px;border-radius:50%;background:var(--purple)}.rival-comparison p{font-size:14px;line-height:1.4;margin:0}.rival-card .difference{font-size:13px;color:var(--sub)}.competitor-sheet{border-top:5px solid var(--cyan)}.rival-card h3 a{color:var(--deep);text-decoration:none}.rival-card .rival-relevance{font-size:12px;line-height:1.5;color:var(--sub);min-height:5em}.rival-card .next-action{margin:16px -8px;padding:14px;background:var(--tint);border-left:3px solid var(--blue)}.rival-card .next-action p{font-size:13px;line-height:1.5;margin-bottom:0}.source-directory{margin-top:20px}.cover .standfirst{max-width:55ch}.report .stats{margin:22px 0}.overview-goal{font-size:12px;color:var(--sub)}.ai-sheet{border-top:5px solid var(--purple)}.method-summary{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.method-summary span{border-left:3px solid var(--cyan);padding:8px 14px;background:var(--soft);font-size:12px}
 @media screen and (max-width:899px){.exhibit{padding:18px 14px}.exhibit-nodes{flex-direction:column;gap:30px}.exhibit-node+.exhibit-node:before{left:45%;top:-29px;transform:rotate(90deg)}.exhibit.contrast .exhibit-node+.exhibit-node:before{transform:none}.exhibit-node .node-text{font-size:26px}.compact-action{grid-template-columns:1fr;gap:4px}.route-stations{grid-template-columns:1fr;margin-left:5px;gap:12px}.route-station{border-top:0;border-left:2px solid var(--blue);padding:12px 0 12px 18px}.route-station:before{left:-6px;top:18px}.route-station:not(:last-child):after{left:-9px;right:auto;top:auto;bottom:-17px;transform:rotate(90deg)}.evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.evidence-thumb svg{height:100px}.rival-grid{grid-template-columns:1fr}.alignment-strip{grid-template-columns:repeat(2,1fr)}.answer-card .exhibit-node+.exhibit-node:before{left:45%;top:-25px}.journey .badge{float:none}.exhibit-node{flex:auto}}
 """
 
@@ -229,22 +239,39 @@ def save_review(store, run_id, review, *, export=True):
     return export_report(store, run_id) if export else None
 
 
-def export_report(store, run_id):
-    with store.lease():
-        record = store.inspect(run_id)
-        baseline = None
-        baseline_id = record["result"].get("baseline")
-        if baseline_id:
-            try:
-                baseline = store.inspect(baseline_id)
-            except FileNotFoundError:
-                pass
-        name = "reviewed-report.html" if record.get("review") else "report.html"
+def export_report(store, run_id, *, record=None):
+    # Publication already uses an atomic no-overwrite link. Reading one retained run
+    # must not wait for the profile-wide browser/model lease.
+    record = store.inspect(run_id) if record is None else record
+    partial_snapshot = (record.get("partial_snapshot") or record["result"].get("state") == "incomplete" or
+                        ("scan" not in record and any(k in record for k in ("request", "site_context", "context"))))
+    if partial_snapshot:
+        record = {**record, "scan": {**record.get("website_review", record.get("request", {})),
+                  **record.get("scan", {}), "state": "partial",
+                  "error": record.get("scan", {}).get("error", "No final scan receipt. Only retained evidence is shown.")}}
+    name = "partial-report.html" if partial_snapshot else "reviewed-report.html" if record.get("review") else "report.html"
+    if not partial_snapshot and record.get("review") and (record.get("context") or record.get("answer_history")):
+        name = "reviewed-report-v3.html"  # Preserve previously delivered HTML while serving the clearer presentation.
+        if record.get("competitor_review"):
+            name = "reviewed-report-competitors.html"
+    if record.get("demo"):
+        name = "demo-report-v2.html"
+    if not partial_snapshot:
         try:
-            store.write_bytes(run_id, name, render(record, baseline).encode())
-        except FileExistsError:
+            return store.published_report(run_id, name)
+        except FileNotFoundError:
             pass
-        return str(store.root / run_id / name)
+    baseline = None
+    if record["result"].get("baseline"):
+        try:
+            baseline = store.inspect(record["result"]["baseline"])
+        except FileNotFoundError:
+            pass
+    try:
+        store.write_bytes(run_id, name, render(record, baseline).encode())
+    except FileExistsError:
+        pass
+    return store.published_report(run_id, name)
 
 
 def screenshot(step, viewport, notes=(), *, image_id=None, zoom=False):
@@ -296,6 +323,166 @@ def screenshot(step, viewport, notes=(), *, image_id=None, zoom=False):
     return result
 
 
+REPLAY_SCRIPT = """(() => {
+  const replay = document.getElementById('journey-replay');
+  if (replay) {
+    const frames = [...replay.querySelectorAll('[data-frame]')];
+    const buttons = [...replay.querySelectorAll('[data-frame-index]')];
+    let current = 0;
+    const show = index => {
+      current = Math.max(0, Math.min(index, frames.length - 1));
+      frames.forEach((frame, i) => { frame.hidden = i !== current; });
+      buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(i === current)));
+      replay.querySelector('[data-position]').textContent = (current + 1) + ' / ' + frames.length;
+      replay.querySelector('[data-previous]').disabled = current === 0;
+      replay.querySelector('[data-next]').disabled = current === frames.length - 1;
+    };
+    replay.querySelector('[data-previous]').addEventListener('click', () => show(current - 1));
+    replay.querySelector('[data-next]').addEventListener('click', () => show(current + 1));
+    buttons.forEach((button, index) => button.addEventListener('click', () => show(index)));
+    replay.querySelector('[data-controls]').hidden = false;
+    show(0);
+  }
+  const reveal = () => {
+    const target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+    for (let parent = target.parentElement; parent; parent = parent.parentElement) {
+      if (parent.tagName === 'DETAILS') parent.open = true;
+    }
+    const folded = target.querySelector('details[data-finding]');
+    if (folded) folded.open = true;
+    target.scrollIntoView({block:'start'});
+  };
+  window.addEventListener('hashchange', reveal);
+  if (location.hash) reveal();
+})();"""
+
+STYLE += """
+.replay{margin:24px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:white}.replay-top{padding:18px 22px;background:var(--deep);color:white;display:flex;align-items:center;justify-content:space-between;gap:20px}.replay-top h3{font-size:18px}.replay-buttons{display:flex;gap:10px;align-items:center}.replay button{font:12px var(--sans);border:1px solid #cbd5e1;background:white;color:var(--deep);border-radius:6px;padding:9px 14px;cursor:pointer}.replay button:disabled{opacity:.45;cursor:default}.replay button:focus-visible{outline:3px solid var(--purple);outline-offset:3px}.replay-strip{display:flex;gap:8px;padding:14px;overflow-x:auto;border-bottom:1px solid var(--line)}.replay-strip button{min-width:145px;max-width:220px;text-align:left;flex:none;font-size:11px}.replay-strip button[aria-pressed=true]{background:var(--tint);border:2px solid var(--blue)}.replay-frame{padding:18px}.replay-frame[hidden]{display:none}.replay-frame svg{display:block;width:100%;height:auto;max-height:620px;background:var(--soft);border:1px solid var(--line)}.replay-frame figcaption{margin-bottom:14px}.replay-frame .source{margin:8px 0}.history-pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin:20px 0}.history-pair>div{min-width:0;padding:18px;background:var(--soft);border-radius:6px}.history-pair>div+div{background:var(--tint)}.history-pair blockquote{margin:14px 0;font:22px/1.4 var(--serif)}.history-row{border-top:1px solid var(--line);padding:20px 0}.history-row h3{font-size:17px;margin:10px 0}.support-bar{height:8px;display:flex;overflow:hidden;border-radius:5px;background:var(--line);margin:10px 0}.support-bar .supported{background:#0e7490}.support-bar .contradicted{background:#b45309}.support-bar .unknown{background:#94a3b8}.history-result{font:36px var(--serif);color:var(--deep)}.saved-criterion{margin:28px 0;padding-top:22px;border-top:1px solid var(--line)}.saved-criterion .history-pair .capture-frame{padding:0}.saved-criterion .shot{margin-top:15px}.badge.passed{background:#ecf8fb;color:#0e7490}.badge.failed{background:#fff2de;color:#92400e}.badge.inconclusive{background:var(--soft);color:var(--sub)}
+.replay-frame .marker{position:static;fill:#1d4ed80a;stroke:var(--blue);stroke-width:2;vector-effect:non-scaling-stroke}
+@media(max-width:700px){.history-pair{grid-template-columns:1fr}.replay-top{align-items:flex-start;flex-direction:column}.replay-frame{padding:10px}.replay-top h3{font-size:16px}}
+@media print{.replay-buttons,.replay-strip{display:none}.replay-frame[hidden]{display:block}.replay-frame{break-inside:avoid}}
+"""
+
+
+def journey_replay(steps, notes, viewport):
+    frames, buttons = [], []
+    for step in steps:
+        if not screenshot_data(step)[0]:
+            continue
+        index = step["index"]
+        title = (step.get("interaction") or {}).get("control", {}).get("text") or step.get("page_title") or "Captured page"
+        linked = [(number, citation) for number, note in notes
+                  for citation in [note, *note.get("related_evidence", [])] if citation["step"] == index]
+        size = step.get("screenshot_size", viewport)
+        width, height = size.get("width", 1280), size.get("height", 800)
+        crop_height = min(height, 800)
+        top = min(max(0, step.get("scroll_y", 0) - step.get("screenshot_origin", {}).get("y", 0)), max(0, height - crop_height))
+        markers = []
+        for number, citation in linked:
+            element = citation.get("element")
+            if type(element) is not int or not 0 <= element < len(step.get("elements", [])):
+                continue
+            box = step["elements"][element]
+            x, y, w, h = [box.get(key, 0) for key in ("x", "y", "width", "height")]
+            if not all(type(value) in (int, float) and math.isfinite(value) and value >= 0 for value in (x, y, w, h)):
+                continue
+            if not markers:
+                top = min(max(0, y - 100), max(0, height - crop_height))
+            markers.append(f'<rect class="marker" x="{x}" y="{y}" width="{w}" height="{h}"/>')
+        state = "Control state confirmed" if step.get("interaction", {}).get("confirmed") else step.get("state", "unknown")
+        frames.append(f'<figure class="replay-frame" data-frame><figcaption><h3>{esc(title)}</h3><span class="source">{esc(state)} · {esc(step.get("fetched_url", ""))}</span></figcaption><svg role="img" aria-label="{esc(title)}" viewBox="0 {top} {width} {crop_height}"><use href="#capture-image-{index}"/>{"".join(markers)}</svg><p class="source">{esc(step.get("purpose", ""))} <a href="#step-{index}">Full capture and retained text</a></p></figure>')
+        buttons.append(f'<button type="button" data-frame-index="{len(frames)-1}" aria-pressed="false">{index+1:02} · {esc(title[:80])}</button>')
+    if not frames:
+        return ""
+    return '<div class="replay" id="journey-replay"><div class="replay-top"><h3>Replay the investigation</h3><div class="replay-buttons" data-controls hidden><button type="button" data-previous>← Previous</button><span data-position aria-live="polite"></span><button type="button" data-next>Next →</button></div></div><div class="replay-strip">' + ''.join(buttons) + '</div>' + ''.join(frames) + '</div>'
+
+
+SOURCE_KEY = ("Supported means a cited passage backs the AI claim. Contradicted means a passage conflicts with it. "
+              "Unknown means the checked sources could not settle it. Advice is counted separately.")
+
+
+def source_action(counts):
+    if counts.get("contradicted"):
+        return "Check the conflicting passages before relying on this answer."
+    if counts.get("unknown"):
+        return "Verify the unresolved details before using this answer to advise a buyer."
+    if counts.get("supported"):
+        return "Use the cited passages when explaining these facts to a buyer."
+    return "Check a primary source before using this answer."
+
+
+def answer_history(history, comparisons=None):
+    body = '<p class="muted">This compares two AI answers to the same buyer question. A change here does not establish that the website changed. '+SOURCE_KEY+'</p>'
+    for row in history["rows"]:
+        old, new = row["before"], row["after"]
+        comparison = (comparisons or {}).get(row["index"], {})
+        if not row["comparable"]:
+            label = "Different test conditions"
+            meaning = row["reason"].rstrip(".") + ". Read the current answer on its own."
+        else:
+            if not row["changed"]:
+                label = "Same answer and source checks"
+            elif old["answer"] != new["answer"]:
+                label = "AI answer wording changed"
+            elif old["citations"] != new["citations"]:
+                label = "Cited sources changed"
+            else:
+                label = "Source evidence changed"
+            before, after = old["factual_claims"], new["factual_claims"]
+            if sum(before.values()) and sum(after.values()):
+                meaning = (f'Cited pages backed {before["supported"]} of {sum(before.values())} factual claims last time '
+                           f'and {after["supported"]} of {sum(after.values())} this time.')
+            elif sum(after.values()):
+                meaning = f'The earlier sample had no factual verdicts. Cited pages back {after["supported"]} of {sum(after.values())} claims this time.'
+            else:
+                meaning = "The current sample has no factual verdicts to compare."
+            if after.get("contradicted"):
+                n = after["contradicted"]
+                meaning += f' {n} current claim{"s conflict" if n != 1 else " conflicts"} with the cited evidence.'
+            meaning += " " + (comparison.get("next_step") or source_action(after))
+        body += '<article class="history-row"><span class="badge">'+esc(label)+'</span><h3>'+esc(row["question"])+'</h3>'
+        body += '<p class="history-takeaway"><strong>What this means.</strong> '+esc(meaning)+'</p>'
+        body += '<div class="history-pair">'
+        for label, value in (("Previous", row["before"]), ("Current", row["after"])):
+            body += '<div><span class="label">'+label+'</span>'
+            if value:
+                counts = value["factual_claims"]
+                total = sum(counts.values())
+                bars = ''.join('<span class="'+status+'" style="width:'+str(100*count/total)+'%"></span>' for status, count in counts.items()) if total else ''
+                body += '<div class="support-bar" aria-hidden="true">'+bars+'</div><p class="source">'+' · '.join(str(count)+' '+status for status, count in counts.items())+'</p>'
+                body += '<details><summary>Answer, citations and claim support</summary><p>'+esc(value["answer"])+'</p><ul>'+''.join('<li class="source">'+esc(url)+'</li>' for url in value["citations"])+'</ul>'
+                for claim in value.get("claim_support", []):
+                    body += '<p><span class="badge">'+esc(claim['status'])+'</span> '+esc(claim['claim'])+'</p>'
+                    body += ''.join('<blockquote class="quote">'+esc(cite['quote'])+'</blockquote><span class="source">'+esc(cite['relation'])+' · '+esc(cite['url'])+'</span>' for cite in claim['evidence'])
+                body += '</details>'
+            else:
+                body += '<p>Answer unavailable</p>'
+            body += '</div>'
+        body += '</div></article>'
+    competitors = history.get("competitors", {})
+    body += '<details><summary>Suggested alternatives across reviews</summary><div class="history-pair">'
+    for label, key in (("Previous", "before"), ("Current", "after")):
+        body += '<div><span class="label">'+label+'</span><ul>'+''.join('<li>'+esc(candidate["name"])+'</li>' for candidate in competitors.get(key, []))+'</ul></div>'
+    return body + '</div></details>'
+
+
+def saved_test_report(record, baseline):
+    retest = record["retest"]
+    body = '<p class="history-result">'+esc(retest["after"]["status"].title())+'</p><p>'+esc(retest["meaning"])+'</p>'
+    for index, criterion in enumerate(retest["definition"]["criteria"]):
+        body += '<article class="saved-criterion" id="note-'+str(index+1)+'"><span class="label">Confirmed statement</span><h3>'+esc(criterion["expected_text"])+'</h3><div class="history-pair">'
+        for label, source, checks in (("Before", baseline, retest["before"]), ("After", record, retest["after"])):
+            check = checks["criteria"][index]
+            body += '<div><span class="label">'+label+'</span><span class="badge '+esc(check["status"])+'">'+esc(check["status"])+ '</span><blockquote>'+esc(check["observed"] or "Source unavailable")+'</blockquote><p class="source">'+esc(check["reason"])+ '</p>'
+            step = next((s for s in (source or {}).get("steps", []) if s["index"] == criterion["step"]), None)
+            if step:
+                body += screenshot(step, source["plan"].get("viewport", {}), [(index+1, {"element": check["element"]})], image_id="saved-"+label.lower()+"-"+str(index), zoom=True)
+            body += '</div>'
+        body += '</div></article>'
+    return body + '<details><summary>Frozen criteria and provenance</summary><pre>'+esc(json.dumps(retest["definition"], indent=2))+'</pre></details>'
+
+
 def render(record, baseline=None):
     """Compose one evidence-led document; presentation never invents analytical copy."""
     if record.get("demo"):
@@ -303,6 +490,11 @@ def render(record, baseline=None):
         return render_demo(record, baseline)
     from datetime import datetime
     plan, result, review = record.get("plan", {}), record.get("result", {}), record.get("review", {})
+    show_evident_cta = record.get("scan", {}).get("show_evident_cta", (baseline or {}).get("scan", {}).get("show_evident_cta", True))
+    if record.get("retest"):
+        saved = record["retest"]
+        review = {"headline": saved["definition"]["title"], "headline_emphasis": saved["after"]["status"].title(),
+                  "summary": saved["meaning"], "standfirst": "Replayed with the same confirmed statements, page regions and control states."}
     steps = record.get("steps", [])
     by_id = {s["index"]: s for s in steps}
     notes = list(enumerate(review.get("notes", []), 1))
@@ -323,15 +515,11 @@ def render(record, baseline=None):
     blocked = [r for r in result.get("requests", []) if r.get("state") not in ("captured", "redirected")]
     omitted = result.get("requests_blocked_after_limit", 0)
     sections, pictured = [], set()
-    mark = '<span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>'
-    brand = '<span class="brand">' + mark + 'EVIDENT</span>'
+    brand = BRAND
 
     def sheet(anchor, label, body, css=""):
         number = len(sections) + 1
-        sections.append(f'''<section class="sheet {css}" id="{anchor}" aria-label="{esc(label)}" data-page="{number}">
-        <aside class="rail" aria-hidden="true">{mark}<span class="rail-name">Evident · {esc(label)}</span><span class="rail-number">{number:02}</span></aside>
-        <div class="sheet-body"><div class="kicker">{brand}<span>{esc(label)} / {esc(issued)}</span></div>{body}
-        <footer class="sheet-foot"><span>{number:02}</span><span>Report by <a href="https://evident.so/" target="_blank" rel="noopener noreferrer">evident.so</a> · {esc(issued)}</span></footer></div></section>''')
+        sections.append(report_sheet(anchor, label, body, issued, number, css))
 
     def heading(kicker, main, detail=""):
         return f'<header class="section-head"><p class="eyebrow">{esc(kicker)}</p><h2>{main}</h2>' + (f'<p>{esc(detail)}</p>' if detail else '') + '</header>'
@@ -382,18 +570,30 @@ def render(record, baseline=None):
     decision_html = ''.join(f'<article class="decision"><span class="label">Recommendation {n:02}</span><a href="#note-{n}">{esc(note["title"])}</a></article>' for n,note in decisions)
     cover_notice = '<p class="callout warning">Synthetic installation test. This is not a review of a real business.</p>' if fixture else ''
     if record.get("scan", {}).get("state") in ("partial", "cancelled") or result.get("state") not in (None,"complete"):
-        cover_notice += '<p class="callout warning">This review has incomplete coverage. Read the method and limitations before acting.</p>'
+        detail = record.get("scan", {}).get("error") or record.get("scan", {}).get("context_error")
+        if not detail and record.get("scan", {}).get("context_state") in ("partial", "interrupted", "cancelled"):
+            detail = "AI answers or alternative comparisons have incomplete source support."
+        cover_notice += '<p class="callout warning"><strong>Partial report.</strong> This review has incomplete coverage. ' + esc(detail or "Read the method and limitations before acting.") + '</p>'
     assessment = review.get("assessment", [])
+    metrics = [(page_count, 'Pages examined'), (len(journeys), 'Journey summaries'),
+               (issues if review else '—', 'Observed issues'), (shot_count, 'Captured screenshots')]
+    if record.get('retest'):
+        results = record['retest']['after']['criteria']
+        metrics = [(sum(item['status'] == state for item in results), label)
+                   for state, label in (('passed', 'Checks matched'), ('failed', 'Checks still differ'), ('inconclusive', 'Checks inconclusive'))]
+        metrics.append((shot_count, 'Replayed screenshots'))
+    stats = '<div class="stats">'+''.join('<div class="stat"><strong>'+esc(value)+'</strong><span>'+label+'</span></div>' for value, label in metrics)+'</div>'
     sheet("overview", "The overview", f'''<div class="cover-domain">Reviewed site: {esc(title)}</div><h1>{esc(review.get('headline','What visitors see.'))}<em>{esc(review.get('headline_emphasis','What to improve.'))}</em></h1>
     <p class="standfirst">{esc(review.get('standfirst','A website and visitor-journey review, grounded in the pages examined.'))}</p>{cover_notice}
-    <div class="stats"><div class="stat"><strong>{page_count}</strong><span>Pages examined</span></div><div class="stat"><strong>{len(journeys)}</strong><span>Journey summaries</span></div>
-    <div class="stat"><strong>{issues if review else '—'}</strong><span>Observed issues</span></div><div class="stat"><strong>{shot_count}</strong><span>Captured screenshots</span></div></div>
+    {stats}
     <details><summary>Review goal &amp; summary</summary><p class="overview-goal">{esc(plan.get("objective","General review"))}</p>{summary_html}</details>
 
     {('<div class="section-rule"><h3>Where to start</h3><span class="muted">Read the evidence and the proposed change</span></div><div class="decisions">'+decision_html+'</div>') if decisions else ''}
-    <p class="caveat">This review concerns the captured website. It does not measure search rankings, external AI answers or real visitor outcomes.</p>''', "cover")
+    <p class="caveat">Website findings describe the captured experience. Visitor outcomes and search performance require separate measurements.</p>''', "cover")
 
-    if not notes:
+    if record.get("retest"):
+        sheet("saved-test", "Saved claim retest", saved_test_report(record, baseline))
+    elif not notes:
         sheet("review", "Findings & actions", heading("Actions", "No supported changes <em>to recommend.</em>"))
 
     kind_labels = {"observed_issue":"Observed issue", "hypothesis":"Opportunity to test", "strength":"What works"}
@@ -417,6 +617,8 @@ def render(record, baseline=None):
             body += capture(step)
         else:
             body += f'<p class="source"><a href="#step-{step["index"]}">See the shared source capture · evidence {step["index"]+1:02}</a></p>'
+        if number > 3:
+            body = '<details data-finding><summary>'+esc(note['title'])+'</summary>'+body+'</details>'
         sheet(f"note-{number}", f"Finding {number:02}", body)
 
     enrichment = record.get("context")
@@ -463,7 +665,10 @@ def render(record, baseline=None):
             typed=checks.get('method')=='cited-source-support.v2'
             claims=[row for row in all_claims if row.get('kind')=='factual'] if typed else all_claims
             excluded=[row for row in all_claims if row.get('kind')!='factual'] if typed else []
-            support='<div class="claim-summary"><span class="label">Factual claims · source support</span><div class="claim-counts">'+''.join('<span class="badge '+status+'">'+str(sum(row['status']==status for row in claims))+' '+status+'</span>' for status in ('supported','contradicted','unknown'))+'</div></div>' if claims else '<p class="source">'+('No factual claims classified' if typed and all_claims else 'Claim support not assessed · unknown')+'</p>'
+            counts = {status: sum(row["status"] == status for row in claims) for status in ("supported", "contradicted", "unknown")}
+            support='<div class="claim-summary"><span class="label">Factual claims · source support</span><div class="claim-counts">'+''.join('<span class="badge '+status+'">'+str(counts[status])+' '+status+'</span>' for status in ('supported','contradicted','unknown'))+'</div></div>' if claims else '<p class="source">'+('No factual claims classified' if typed and all_claims else 'Claim support not assessed · unknown')+'</p>'
+            meaning = c.get("insight") or source_action(counts)
+            support = '<p class="answer-takeaway"><strong>What this means.</strong> '+esc(meaning)+'</p>' + support
             claim_detail=''
             for claim in claims:
                 evidence=''
@@ -478,9 +683,9 @@ def render(record, baseline=None):
                 labels={'advice':'Advice','uncertainty':'Author uncertainty','other':'Non-claim text','unclassified':'Unreviewed text · unknown'}
                 advice=sum(c.get('kind')=='advice' for c in excluded);unreviewed=sum(c.get('kind')=='unclassified' for c in excluded)
                 support+='<p class="source">'+str(advice)+' advice · '+str(len(excluded)-advice-unreviewed)+' uncertainty / other text'+(' · '+str(unreviewed)+' unreviewed spans (unknown)' if unreviewed else '')+' · outside factual verdict counts</p><details class="advice-details"><summary>Advice &amp; other answer text</summary><ul class="claim-list">'+''.join('<li class="nonclaim-row"><span class="badge">'+esc(labels.get(c.get('kind'),'Unclassified'))+'</span><p class="claim-text">'+esc(c['answer_quote'])+'</p><p class="muted">'+esc(c['reason'])+'</p></li>' for c in excluded)+'</ul></details>'
-            rows += '<article class="answer-card" id="answer-'+str(a['index'])+'"><span class="sample-label">'+str(a['index']+1).zfill(2)+' · '+cohort+'</span><h3>'+esc(a['question']['question'])+'</h3><span class="badge '+esc(c.get('status','unknown'))+'">Website alignment · '+esc(c.get('status','unknown'))+'</span>'+positions+'<div class="next-action"><span class="label">Next step</span><p>'+esc(c.get('next_step','Inspect retained evidence before acting.'))+'</p></div>'+support+'<details><summary>Full answer, interpretation &amp; source checks</summary><p>'+esc(c.get('insight','Comparison unavailable'))+'</p>'+details+'</details></article>'
+            rows += '<article class="answer-card" id="answer-'+str(a['index'])+'"><span class="sample-label">'+str(a['index']+1).zfill(2)+' · '+cohort+'</span><h3>'+esc(a['question']['question'])+'</h3><span class="badge '+esc(c.get('status','unknown'))+'">Website alignment · '+esc(c.get('status','unknown'))+'</span>'+positions+'<div class="next-action"><span class="label">Next step</span><p>'+esc(c.get('next_step','Inspect retained evidence before acting.'))+'</p></div>'+support+'<details><summary>Full answer &amp; source checks</summary>'+details+'</details></article>'
         body += '<div class="answer-grid">'+rows+'</div>'
-        body += '<p class="caveat">Supported: captured cited passages establish the claim. Contradicted: passages explicitly conflict. Unknown: factual evidence is insufficient. Advice, author uncertainty and other non-claims are shown separately; unreviewed text remains explicit. These are model judgments about source support, not independent verification of truth. Website alignment above is a separate comparison.</p>'
+        body += '<p class="caveat">'+SOURCE_KEY+'</p>'
         followups=enrichment.get('source_followups',[])
         if 'followup_state' in enrichment:
             body+='<p class="source">Source investigation: '+str(sum(r.get('state')=='captured' for r in followups))+' linked reads captured · '+str(sum(r.get('state')=='unavailable' for r in followups))+' unavailable · one bounded round</p>'
@@ -491,26 +696,47 @@ def render(record, baseline=None):
                 else:trail+='<li>'+esc(r.get('detail','Source follow-up unavailable'))+'</li>'
             body+='<details class="source-investigation"><summary>Followed sources &amp; limits</summary><p>Hermes follows up to six links observed on cited pages to check unresolved factual claims. These additional sources were found after the independent answers. Classification and original answer text stay fixed.</p><p class="source">'+esc(enrichment['followup_state'].replace('_',' '))+'</p><ul>'+trail+'</ul></details>'
         sheet("ai-context", "AI answers", body, "ai-sheet")
-        body=heading("The consideration set", "Your offer.<br><em>The alternatives beside it.</em>", "Model-suggested candidates, not a confirmed competitor set or ranking.")
-        body+='<p class="source">Reviewed site: '+esc(host)+' · Category: '+esc((enrichment.get('plan') or {}).get('category','Unconfirmed'))+'</p>'
+        competitor_review = record.get("competitor_review", {})
+        rival_comparison = competitor_review.get("comparison") or comparison
+        body=heading("Competitors", "Who else enters<br><em>the decision.</em>",
+                     "Suggested competitors for this buyer and goal. Confirm the ones that matter to you.")
+        if competitor_review.get("comparison"):
+            body += '<p class="standfirst">'+esc(rival_comparison.get("summary",""))+'</p>'
+        body += '<p class="source">Reviewed site · '+esc(host)+'</p>'
         rows = ''
-        alternatives = {r['index']:r for r in comparison.get('competitors', [])}
+        alternatives = {r['index']:r for r in rival_comparison.get('competitors', [])}
         sources = {r['requested_url']:r for r in enrichment.get('sources', [])}
-        for i,candidate in enumerate((enrichment.get('plan') or {}).get('competitors', [])):
-            c = alternatives.get(i, {})
+        candidates = (enrichment.get('plan') or {}).get('competitors', [])
+        supported = sum(bool(alternatives.get(c.get("index", i), {}).get("source_quote")) for i,c in enumerate(candidates))
+        body += '<div class="method-summary"><span>'+str(len(candidates))+' suggested competitors</span><span>'+str(supported)+' comparisons with quoted evidence</span><span>Same visitor goal</span></div>'
+        for i,candidate in enumerate(candidates):
+            c = alternatives.get(candidate.get("index", i), {})
             source = sources.get(candidate['url'], {})
-            insight = c.get('insight') if c.get('source_quote') else 'Insufficient captured source evidence for a comparison; relevance remains a model suggestion.'
+            supported_row = bool(c.get("source_quote"))
+            status = "Evidence-backed comparison" if supported_row else "Source unavailable" if source.get("state") != "captured" else "Comparison unverified"
+            insight = c.get('insight') if supported_row else 'This source has not established a usable comparison for the stated goal.'
+            action = c.get("next_step") or ("Choose a change to test using the observed difference." if supported_row else "Confirm this candidate and inspect its source before using it to change the site.")
             support = '<blockquote class="quote">'+esc(c.get('source_quote',''))+'</blockquote>'+context_citations(c.get('site_evidence', []))
             if source:
-                support += '<a href="#context-source-'+str(source['index'])+'">Inspect alternative source</a>'
-            site_position=c.get('site_position') if c.get('site_evidence') else 'Not compared'
-            alternative_position=c.get('alternative_position') if c.get('source_quote') else 'Source evidence unavailable'
-            rows += '<article class="rival-card"><span class="badge">'+esc(candidate['relationship'].replace('_',' '))+'</span><h3>'+esc(candidate['name'])+'</h3><div class="rival-comparison"><div><span class="label">'+esc(host)+'</span><p>'+esc(site_position or 'See retained site evidence')+'</p></div><div><span class="label">'+esc(candidate['name'])+'</span><p>'+esc(alternative_position or 'See retained source')+'</p></div></div><p class="difference">'+esc(insight)+'</p><details><summary>Why this alternative &amp; evidence</summary><p>'+esc(candidate['reason'])+'</p>'+support+'</details></article>'
+                support += '<a href="#context-source-'+str(source['index'])+'">Inspect competitor source</a>'
+            site_position=c.get('site_position') if c.get('site_evidence') else 'Website contrast not established'
+            alternative_position=c.get('alternative_position') if supported_row else 'Competitor contrast not established'
+            rows += ('<article class="rival-card"><span class="badge">'+status+'</span><h3>'+
+                '<a href="'+esc(candidate['url'])+'" target="_blank" rel="noopener noreferrer">'+esc(candidate['name'])+'</a></h3>'+
+                '<p class="rival-relevance">'+esc(candidate['reason'])+'</p>'+
+                '<div class="rival-comparison"><div><span class="label">'+esc(host)+'</span><p>'+esc(site_position)+'</p></div>'+
+                '<div><span class="label">'+esc(candidate['name'])+'</span><p>'+esc(alternative_position)+'</p></div></div>'+
+                '<p class="difference"><strong>Why it matters.</strong> '+esc(insight)+'</p>'+
+                '<div class="next-action"><span class="label">What to test</span><p>'+esc(action)+'</p></div>'+
+                '<details><summary>Compare the exact evidence</summary>'+support+'</details></article>')
         body += '<div class="rival-grid">'+rows+'</div>'
-        count = len((enrichment.get('plan') or {}).get('competitors', []))
-        if count < 3:
-            body += '<p class="caveat">'+str(count)+' of up to three candidates suggested; missing candidates are not invented.</p>'
-        body += '<p class="caveat">'+esc(comparison.get('selection_caveat','Suggested alternatives require your confirmation.'))+'</p><p class="muted">Not your competitors? Give Hermes the intended audience, region or alternatives in a new goal-focused run. Disagreement alone does not establish a positioning problem.</p>'
+        if len(candidates) < 3:
+            body += '<p class="caveat">The retained evidence supplies '+str(len(candidates))+' of up to three candidates.</p>'
+        if competitor_review.get("issues"):
+            body += '<p class="caveat">Some proposed comparisons lacked usable source evidence. The supported comparisons remain visible.</p>'
+        body += ('<details><summary>Selection &amp; limitations</summary><p>'+esc(rival_comparison.get('selection_caveat','Suggested alternatives require your confirmation.'))+'</p>'+
+                 '<p>These are suggestions, not a confirmed competitor set or ranking. Tell Hermes which to keep or replace. It can remember your corrections for future reviews.</p></details>')
+        body += '<details class="source-directory"><summary>Sources for AI answers &amp; competitors</summary>'
         for source in enrichment.get('sources', []):
             source_link = esc(source['requested_url'])
             if source['state']=='captured':
@@ -522,7 +748,13 @@ def render(record, baseline=None):
         body += '<p class="caveat">Source retrieval alone does not establish claim support. Checks use only the retained text, which may be truncated or unavailable. Current policy, availability and competitor relevance may still require confirmation.</p>'
         if enrichment.get('issues'):
             body += '<details><summary>Incomplete context</summary><ul>'+''.join('<li>'+esc(i)+'</li>' for i in enrichment['issues'])+'</ul></details>'
-        sheet("alternatives", "Competitors & alternatives", body)
+        body += '</details>'
+        sheet("alternatives", "Competitors", body, "competitor-sheet")
+
+    if record.get("answer_history"):
+        current_rows = ((enrichment or {}).get("comparison") or {}).get("answers", [])
+        sheet("answer-history", "Answer history", heading("Previous and current answers", "How the AI answer <em>changed.</em>") +
+              answer_history(record["answer_history"], {row["index"]: row for row in current_rows}))
 
     if journeys:
         body = heading("The visitor paths", "Follow the decision.<br><em>See what was reached.</em>", "Recorded routes and what they established for the goal.")
@@ -543,17 +775,18 @@ def render(record, baseline=None):
 
     remaining = [s for s in steps if s["index"] not in pictured and s.get("action") != "return_to"]
     library = heading("The evidence library", "Captured pages. <em>Original evidence.</em>", "Every retained screenshot remains available below or beside an action.")
+    library += journey_replay(steps, notes, viewport)
     thumbs=''
     for step in steps:
         if not screenshot_data(step)[0]:continue
         width=step.get('screenshot_size',viewport).get('width',1280);height=step.get('screenshot_size',viewport).get('height',800)
         thumbs+='<a class="evidence-thumb" href="#step-'+str(step['index'])+'"><svg aria-hidden="true" viewBox="0 0 '+str(width)+' '+str(min(height,1000))+'"><use href="#capture-image-'+str(step['index'])+'"/></svg><span>'+str(step['index']+1).zfill(2)+' · '+esc(urlsplit(step.get('fetched_url','')).path or '/')+'</span></a>'
-    library+='<div class="evidence-grid">'+thumbs+'</div>'
+    library+='<details><summary>All captured states</summary><div class="evidence-grid">'+thumbs+'</div></details>'
     library += ''.join('<details class="evidence-detail"><summary>Evidence '+str(step['index']+1).zfill(2)+' · '+esc(urlsplit(step.get('fetched_url','')).path or '/')+'</summary>'+capture(step)+'</details>' for step in remaining) if remaining else '<p>All captures appear alongside their actions above.</p>'
 
     sheet("captures", "Supporting evidence", library)
 
-    if result.get("verification"):
+    if result.get("verification") and not record.get("retest"):
         verification = result["verification"]
         rows = ''.join(f'<tr><td>{esc(t["assertion"]["expected"])}</td><td>{esc(t["before"])}</td><td>{esc(t["after"])}</td><td>{esc(t["transition"].replace("_"," "))}</td></tr>' for t in verification['transitions'])
         pairs = ''
@@ -592,6 +825,15 @@ def render(record, baseline=None):
     if blocked or omitted:
         body += f'<p class="callout warning">{len(blocked)+omitted} resources were not captured. Missing assets or blocked requests may alter the rendering; these omissions are not website defects.</p>'
     control_review=record.get('scan',{}).get('control_investigation',[])
+    declarations = {step.get('fetched_url'): step for step in steps if step.get('document_observations')}
+    if declarations:
+        rows = ''
+        for source_url, step in declarations.items():
+            observation = step['document_observations']
+            canonical = '\n'.join(item['resolved'] for item in observation['canonical']) or 'No rendered canonical declaration observed'
+            robots = '\n'.join(item['agent']+' · '+item['content'] for item in observation['robots']) or 'No rendered robots declaration observed'
+            rows += '<tr><td><a href="#step-'+str(step['index'])+'">'+esc(source_url)+'</a></td><td>'+esc(canonical)+'</td><td>'+esc(robots)+'</td></tr>'
+        body += '<details><summary>Visited-page canonical and robots observations</summary><p>Rendered declarations at capture time. Actual indexing, robots.txt and response-header directives remain unmeasured.</p><div class="table-wrap"><table><thead><tr><th>Visited page</th><th>Canonical</th><th>Robots directives</th></tr></thead><tbody>'+rows+'</tbody></table></div></details>'
     if control_review:
         changed=sum(c['outcome']=='changed' for c in control_review)
         unresolved=sum(c['outcome'] in ('unknown','unreviewed','not_reached','unconfirmed') for c in control_review)
@@ -629,15 +871,21 @@ def render(record, baseline=None):
                 step.pop(field)
     body += '<details><summary>Technical evidence &amp; provenance</summary><pre>'+esc(json.dumps(metadata,ensure_ascii=True,indent=2))+'</pre></details>'
     sheet("coverage", "Method & scope", body)
-    if record.get("scan",{}).get("show_evident_cta",True):
+    if show_evident_cta:
         sheet("deeper", "Continue with Evident", heading("The next conversation", "Your website is <em>one part of the picture.</em>") + '''<div class="deep-report"><p class="eyebrow">Go deeper with Evident</p><h2>Understand the wider<br><em>perception gap.</em></h2><p>Explore a deeper report on how your business appears across search, AI and human touchpoints. Discuss the questions, scope and evidence your business needs.</p><a class="cta" href="https://evident.so/" target="_blank" rel="noopener noreferrer">Explore a deep report <span aria-hidden="true">↗</span></a><small>Visit evident.so. Opening this link does not submit your website, upload this report or start a scan.</small></div><p class="closing">This website review offers evidence-linked observations and proposed changes. A deeper Evident engagement is separate; its scope and availability must be confirmed.</p>''')
     style_hash = base64.b64encode(hashlib.sha256(STYLE.encode()).digest()).decode()
+    script = REPLAY_SCRIPT if steps else ""
+    script_hash = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
     csp = f"default-src 'none'; img-src data:; style-src 'sha256-{style_hash}'; style-src-attr 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+    if script:
+        csp += f"; script-src 'sha256-{script_hash}'"
     nav = '<nav class="snav" aria-label="Report sections"><div class="snav-inner">'+brand+''.join(f'<a href="#{a}">{label}</a>' for a,label in [('overview','Overview'),('review','Actions'),('journeys','Journeys'),('captures','Evidence'),('coverage','Method'),('deeper','Go deeper')])+'</div></nav>'
-    if not record.get("scan",{}).get("show_evident_cta",True):
+    if not show_evident_cta:
         nav = nav.replace('<a href="#deeper">Go deeper</a>', '')
     if enrichment:
-        nav = nav.replace('<a href="#coverage">Method</a>', '<a href="#ai-context">AI answers</a><a href="#alternatives">Alternatives</a><a href="#coverage">Method</a>')
+        nav = nav.replace('<a href="#coverage">Method</a>', '<a href="#ai-context">AI answers</a><a href="#alternatives">Competitors</a><a href="#coverage">Method</a>')
     if not journeys:
         nav = nav.replace('<a href="#journeys">Journeys</a>', '')
-    return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="{esc(csp)}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)} — Evident website review</title><style>{STYLE}</style></head><body>{nav}<main class="report">'+''.join(sections)+'</main></body></html>'
+    if record.get('retest'):
+        nav = nav.replace('<a href="#review">Actions</a>', '<a href="#saved-test">Saved checks</a>')
+    return f'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="{esc(csp)}"><meta name="referrer" content="no-referrer"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)} — Evident website review</title><style>{STYLE}</style></head><body>{nav}<main class="report">'+''.join(sections)+'</main>'+('<script>'+script+'</script>' if script else '')+'</body></html>'

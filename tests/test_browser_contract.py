@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from test_evidence import Store, plan
+from test_evidence import Store, plan, assert_safe_report_scripts
 from evidence_candidate.browser import validate_browser_plan, validate_browser_server_url
 from evidence_candidate.commands import browser_plan
 from evidence_candidate.interpretation import explain
@@ -51,7 +51,7 @@ class BrowserContractTests(unittest.TestCase):
             {"index": 0, "state": "observed", "assertions": [], "source_text": "<img src=https://untrusted.invalid/>",
              "screenshot_png": '\" onerror=\"bad()'}]}
         view = render(record)
-        self.assertNotIn("<script>", view)
+        assert_safe_report_scripts(self, view)
         self.assertNotIn("<img", view)
         self.assertIn("&lt;img", view)
         with tempfile.TemporaryDirectory() as tmp:
@@ -131,7 +131,7 @@ class ReportWorkflowTests(unittest.TestCase):
                 path=save_review(store,run,{'summary':'Fixture review','notes':[note],'limitations':'Fixture only.'})
                 saved=store.read(run,'review.json');html=Path(path).read_text()
                 self.assertEqual(saved['notes'][0]['quote'],'Open weekdays')
-                self.assertNotIn('<script>',html)
+                assert_safe_report_scripts(self, html)
                 if bad:
                     self.assertNotIn('exhibit',saved['notes'][0])
                     self.assertEqual(saved['visual_issues'][0]['code'],'exhibit_unavailable')
@@ -163,7 +163,7 @@ class ReportWorkflowTests(unittest.TestCase):
             rendered=Path(path).read_text()
             self.assertIn('Review summary',rendered)
             self.assertIn('Proposed change',rendered)
-            self.assertNotIn('<script>',rendered)
+            assert_safe_report_scripts(self, rendered)
             self.assertEqual(export_report(store,run_id),path)
             with self.assertRaises(FileExistsError):
                 save_review(store,run_id,review)
@@ -212,12 +212,17 @@ class ReportWorkflowTests(unittest.TestCase):
         self.assertIn('Report by <a',html)
         self.assertIn('Reviewed site: example.com',html)
         self.assertEqual(external[0]['rel'],'noopener noreferrer')
-        self.assertFalse(doc.scripts)
+        self.assertEqual(doc.scripts, [{}])
+        assert_safe_report_scripts(self, html)
         self.assertTrue(all(src.startswith(('data:image/png;base64,','data:image/jpeg;base64,')) for src in doc.images))
         self.assertLess(html.index('id="review"'),html.index('id="journeys"'))
         self.assertLess(html.index('id="note-1"'),html.index('id="coverage"'))
         self.assertIn('Done when',html)
         self.assertIn('Opportunity to test',html)
+        self.assertIn('.replay-frame .marker{position:static;fill:#1d4ed80a;stroke:var(--blue)', html)
+        without_cta = render(record, {"scan": {"show_evident_cta": False}})
+        self.assertNotIn('id="deeper"', without_cta)
+        self.assertNotIn('href="#deeper"', without_cta)
 
     def test_observation_plan_does_not_require_an_invented_assertion(self):
         value=browser_plan('https://example.com/','unused')
@@ -253,7 +258,7 @@ class AutomaticReportTests(unittest.IsolatedAsyncioTestCase):
                 return SimpleNamespace(parsed=review, text=json.dumps(review), provider="mock", model="mock", usage=Usage())
         ctx = SimpleNamespace(get_config=lambda key, **kw: True if key in ("browser_enabled","allow_model_interpretation") else kw.get("default"), llm=Model())
         async def capture(store, plan, origins, **kwargs):
-            run = store.create(plan)
+            run = kwargs["run_id"]
             for index in range(5):
                 store.write(run, f"step-{index}.json", {"index":index,"state":"observed","source_text":"Office hours", "assertions":[],
                     "fetched_url":"https://example.com/", "document_status":http_status, "screenshot_png":"" if missing_image and index==0 else "iVBORw0KGgo=", "elements":[{"text":"Office hours","x":1,"y":1,"width":10,"height":10}]})
@@ -261,7 +266,7 @@ class AutomaticReportTests(unittest.IsolatedAsyncioTestCase):
             store.write(run,"result.json",result)
             return result
         context_runs=[];context_partial=False
-        async def context_collect(ctx, store, run_id):
+        async def context_collect(ctx, store, run_id, **kwargs):
             context_runs.append(run_id)
             value={'state':'partial' if context_partial else 'complete','answers':[],'sources':[],'plan':None,'comparison':None}
             store.write(run_id,'context.json',value)
@@ -356,7 +361,7 @@ class PublicAssessmentTests(unittest.IsolatedAsyncioTestCase):
         fake=AsyncMock(return_value={'state':'complete','summary':'Fixture','view':'/tmp/report.html'})
         with patch('evidence_candidate.interpretation.scan_report',fake):
             self.assertIn('MEDIA:',await fn('https://example.com/'))
-            self.assertEqual(fake.call_args.args[3],DEFAULT_OBJECTIVE)
+            self.assertIsNone(fake.call_args.args[3])
             self.assertTrue(fake.call_args.kwargs['context'])
             await fn('https://example.com/ --no-context')
             self.assertFalse(fake.call_args.kwargs['context'])

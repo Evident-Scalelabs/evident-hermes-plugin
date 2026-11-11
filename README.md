@@ -10,27 +10,55 @@ Start a Hermes chat with **“Is this evident?”**
 >
 > **Hermes** · Which website should I look at?
 
-Send the URL and Hermes follows the journey with that buyer and decision in mind. For a general perception scan, give the address and say “just take a look.” If you send the address first, Hermes asks about your focus. “Is my website evident?” opens the same conversation. The wording of Hermes’s replies can vary with its configured model.
+You can also say **“Evident, review this: https://example.com/”** with your decision in the same message.
 
-You get **one offline HTML report** with highlighted screenshots, actionable findings and the limits of what Hermes could verify. By default the report also includes independent AI answers and suggested alternatives. You can ask for a website-only review.
+Send the URL and Hermes follows the journey with that buyer and decision in mind. A returning site uses its saved goal. A new URL starts a general perception scan when you leave the focus open. You can request a new goal or a fresh general review. “Is my website evident?” opens the same conversation. The wording of Hermes’s replies can vary with its configured model.
+
+You get **one offline HTML report** with highlighted screenshots, actionable findings and the limits of what Hermes could verify. By default the report also includes independent AI answers and a dedicated Competitors page with suggested alternatives, quoted contrasts, and concrete changes to test. You can ask for a website-only review.
 
 Enable `browser_enabled` and `allow_model_interpretation` once in this plugin's settings. A report request then authorizes its public-page capture and host-model processing, which may incur cost. The plugin uses the supported `ctx.llm.acomplete_structured` image/text API; it never reads model credentials or overrides provider/model settings. A vision-capable configured model is required. Capture-only `observe`/`evident_browse` still works without model calls. `demo` reviews a fictional buying journey, then verifies declared fixture changes in one visual report.
 
 The automatic report discovers real links, headings and supported display controls, selects relevant visitor tasks with the configured host model, follows actual anchors, and inspects useful sections across pages in one isolated browser context. It returns one report with journey summaries, observed issues separated from hypotheses and strengths, cross-page citations, priorities with reasons, concrete changes and acceptance tests. It does not claim an exhaustive crawl or canonical perception score. Links to other origins are listed as handoffs unless that origin is already operator-authorized; forms, sign-ins, purchases and scan submissions are never performed.
 
+In chat, the website review and the requested AI comparison share a run ID across two bounded tool calls. Hermes follows the returned continuation in the same conversation. Each dispatch reserves time under the host deadline for saving and returning its result. Direct CLI and slash scans perform both stages in sequence.
+
 Default safety budgets are eight pages and 600 seconds for capture plus planning, configurable as `review_max_pages` (2–12) and `review_seconds` (60–900), or per command with `--max-pages`/`--seconds`. These are ceilings, not quotas. Planning uses at most ten disclosed host calls (up to 5,000 output tokens / 60 seconds each); one final multimodal report call is capped at 9,000 output tokens / 120 seconds. Navigation stays within 24 recorded steps, a 15-second bound per link click, 400 requests, 64 MiB response-body budget and 12 MiB total image bytes. There is no hidden model retry. Same-host/www entry redirects are inspected up to three hops with pinned public HTTPS; interior document redirects are followed only within the exact authorized origin, up to three hops. Requested URLs, redirect receipts and final URLs remain distinct; original literal assertions are not rewritten. Navigation URLs with query strings or credentials remain omitted; browser fragment navigation is preserved. Exact query parameters on public display assets are retained, never rewritten. The actual expanded plan is saved immutably before verification; replay never replans or rewrites earlier assertions.
 
 Missing screenshots, invalid exact source quotes or model failure preserve captured evidence and produce an explicitly incomplete result. A missing or incorrect screenshot index is resolved only when its quote uniquely matches a measured text container; otherwise the highlight is omitted. Adjustments are recorded; model interpretation is not rewritten. Planning choices, rejected selections, the navigation trace, original model output and usage remain in the profile-owned run. The report identifies inspected routes, unresolved tasks and uncaptured handoffs.
 
-## Evidence and verification — private preview
+## Evidence and verification
 
 A native Hermes plugin for rendered evidence, screenshots, bounded link navigation and repeatable task assertions. It also retains the lightweight HTTP-source workflow. The plugin observes and verifies; authorized host tools apply separately approved local changes. These are new plugin contracts, not canonical measurement or scoring services.
 
-This candidate is awaiting release, license and naming review. No public license has been selected. There is no connected service, account requirement for deterministic capture, telemetry, editing tool or scheduled job. A conversational host-authored review uses the normal Hermes session. Optional separate model explanation uses the configured Hermes model only after opt-in and explicit consent.
+Licensing has not yet been specified. There is no connected service, account requirement for deterministic capture, telemetry, editing tool or scheduled job. A conversational host-authored review uses the normal Hermes session. Optional separate model explanation uses the configured Hermes model only after opt-in and explicit consent.
 
-## Compatibility and installation for private review
+## Compatibility and installation
 
-Python 3.11+ on a POSIX host with `O_NOFOLLOW` and `fcntl`. Tested on macOS with Python 3.14.9 against unmodified public [Hermes source](https://github.com/NousResearch/hermes-agent/tree/a5f20c5c04d52dd92a55c01e58dcc004896b52c2). The plugin uses documented native `register_tool`, `register_skill`, `get_config` and `plugins.plugin_storage.plugin_data_dir`. Hermes does not supply a global plugin API version; no guessed minimum Hermes version is declared. A missing storage interface or unsupported Python fails registration. Windows is unsupported by this preview; The preceding private version was also tested in a Linux Hermes v0.21.5 installation with an isolated browser worker; verify each new candidate on its serving host.
+Site history uses Hermes's native profile-scoped `plugins.plugin_storage.plugin_db()` and a local SQLite database beside the immutable evidence store. The host must provide that interface. The plugin records business context only through its explicit memory and investigation tools.
+
+## Site memory and repeatable corrections
+
+The `evident_memory` tool recalls the site's goal, audience, confirmed facts, competitor corrections, finding feedback, prior reviews and saved tests. Corrections use the same key and retain a revision. Facts supplied by the user carry that provenance. Observations and model interpretations retain their dated run references. An unavailable source is marked explicitly.
+
+Ask Hermes to remember or correct a fact, to show what it remembers, or to forget a selected item or the whole site. Forgetting removes the selected facts from retrieval. A retrieval boundary prevents older summaries from restoring forgotten statements. Historical reports and test records remain on disk. The `evident_delete` tool removes a specifically selected evidence run. Each Hermes profile has independent storage. Host conversation logs and host-created backups follow the host's retention settings.
+
+For a saved correction, Hermes proposes the complete expected statement in each cited region. After the user confirms it, `evident_save_test` stores the finding, source selectors, page and section identities, displayed control states, expected text and baseline result. After an authorized edit, `evident_verify` accepts `test_id` and `change_context`. It replays the original journey and tests the same criteria. The report pairs highlighted before/after evidence. Site history retains the test's passed, failed or inconclusive outcome alongside its evidence run.
+
+The first version compares exact rendered statements with whitespace normalized. Text in another region cannot satisfy a check. Additional contradictory wording fails the exact check. A missing page, ambiguous element, changed identity, truncated text, different control state or changed collection conditions yields an inconclusive result. Captures made before stable identity collection require a fresh baseline. Changed goals, audiences or confirmed business facts require new confirmation. Existing run-based verification remains available.
+
+```sh
+hermes evident verify TEST_ID --saved --change "The site owner corrected the confirmed pricing statement"
+```
+
+Comparable repeat reviews reuse their four saved buyer questions. The report compares individual answers, source-support counts, citations and suggested competitors. It records the actual model route and requested sampling settings. Changed conditions are labelled incomparable. Competitor include/exclude corrections guide future suggestions. Individual samples can vary even with identical settings. For more detail on a saved review, ask Hermes to expand its competitor page. It can call `evident_finish` with `competitors: true` for one saved analysis of the already captured public sources. This adds a model call and preserves the original review. Competitor choices remain editable through site memory.
+
+Reports include a previous/next screenshot replay using retained images, measured highlights and the actual sequence of pages and controls. A fixed, hash-authorized offline script drives the viewer. Three leading actions stay prominent and further findings are expandable. Canonical and robots declarations are recorded on visited pages with their measurement limits.
+
+General conversation memory, embeddings, multi-model campaigns, scheduling, Search Console, ranking/backlink data and mobile/keyboard investigations are planned extensions. This candidate uses site-specific history and the host's configured model.
+
+## Host compatibility
+
+Requires Python 3.11+ on a POSIX host with `O_NOFOLLOW` and `fcntl`, plus native `register_tool`, `register_skill`, `get_config`, `plugins.plugin_storage.plugin_data_dir` and `plugin_db`. Conversational routing uses the native pre_llm_call hook and, when offered by the host, register_system_prompt_section. Native loader and fixture tests ran on macOS with Python 3.14 against official Hermes v0.23.1 source, and on Linux with Python 3.13.5 and Hermes v0.21.5. The Linux host used the isolated loopback browser worker because its supervisor capture interface was unavailable. The manifest declares its concrete dependencies. Windows and vendor Desktop bundles require separate compatibility work. [Tested official Hermes source](https://github.com/NousResearch/hermes-agent/tree/3b421578588243f920886e6fe79a6faa87ea026e)
 
 For an existing supported Hermes installation, extract the private ZIP and copy only its `evident-evidence/` directory into the intended profile's `plugins/` directory. A disposable test profile is recommended for first use. Do not replace an existing plugin directory without reviewing its local changes. Run the [official checks](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission):
 
@@ -40,7 +68,7 @@ hermes plugins validate /absolute/path/to/evident-evidence --install-deps
 hermes plugins enable evident-evidence
 ```
 
-The plugin declares `playwright==1.64.0`; the official plugin installer/validator prepares it. Install its matching managed Chromium using `python -m playwright install chromium` in the same Hermes runtime. It never falls back to installed Chrome or a personal browser profile. This is a native plugin directory, not a pip package. The plugin is installed and exercised through the real upstream CLI, loader and dispatcher in an isolated source-based Hermes runtime. Real headless Chromium rendering/navigation and the native demo passed. A vendor Desktop bundle and interactive model-driven conversation have not been tested. Review the destination host's compatibility separately.
+The plugin declares `playwright==1.64.0`. The official plugin installer/validator prepares it. Install its matching managed Chromium using `python -m playwright install chromium` in the same Hermes runtime. Installation uses a native plugin directory. Configured-model URL reviews and memory conversations were exercised through the native Hermes CLI. Separate deterministic fixtures exercise real headless Chromium, native dispatch and verification without model interpretation. Use the retained receipts for the tested source revision and destination runtime.
 
 In that profile's settings, explicitly authorize anonymous read-only origins. Default settings deny all capture. Public mode permits HTTPS on port 443 only. `fixture_origin` is an optional single **isolated synthetic** server, using literal `127.0.0.1` or `::1` and an explicit non-default port; it is not permission to inspect unrelated local services. Example configuration:
 
@@ -125,7 +153,7 @@ Use `skill_view("evident-evidence:evidence-loop")`, or call `evident_observe` wi
 }
 ```
 
-`evident_inspect({"run_id":"…"})` retrieves the plan, step evidence, final receipt and saved report path. The HTML is exported automatically inside the owning run; it contains no executable page content or external resources. JSON artifacts are already on disk. No viewer server is started.
+`evident_inspect({"run_id":"…"})` retrieves the plan, step evidence, final receipt and saved report path. If a call times out, ask “Get my saved Evident report for [exact URL].” Hermes can use `evident_inspect({"url":"…"})` to find the latest matching request in this profile, or supply a run ID and `summary_only: true`. The response identifies the URL, goal, stage and retained evidence. A running review can be inspected again. An interrupted review with evidence yields a labelled partial report. A saved website stage with pending, previously requested comparison work can be continued with `evident_finish`. Asking only to retrieve a report makes no network or model calls. The HTML is exported automatically inside the owning run; it contains no executable page content or external resources. JSON artifacts are already on disk. No viewer server is started.
 
 After the host applies a separately approved local change, call `evident_verify({"run_id":"…","change_context":"Describe the actual change"})`. Verification accepts no replacement URLs or assertions. It replays the saved plan under the **current** authorization settings. The plugin never writes to the target site or source workspace.
 
@@ -174,7 +202,13 @@ For the rendered integration, install the pinned Playwright dependency and its m
 python tests/integration_browser.py /absolute/hermes-source --receipt-dir /absolute/private-rendered-receipts
 ```
 
-This exercises real Hermes tool dispatch, JavaScript rendering, CSS, hidden-text exclusion, anchor navigation, screenshots, identical-assertion repair/unchanged/regression, button refusal, same-origin redirect capture, cross-origin/loop refusal and request/credential restrictions. It uses synthetic local content and no model. This test passed on macOS arm64 with Chromium 156.0.8078.4 and the pinned Hermes source above. The private executed-test receipt also records the native CLI demo and a public HTTPS observation/replay. The preceding private candidate also passed on Linux with the loopback browser worker. Vendor Desktop execution remains untested; each release needs its own serving-host receipt.
+This fixture exercises real Hermes dispatch, JavaScript rendering, hidden-text exclusion, anchor navigation, screenshots, identical-assertion repair and regression, redirect boundaries, and request restrictions. It uses synthetic local content without model interpretation. Executed-test receipts identify the source revision and serving host for each run.
+
+Saved business-claim tests have a separate native fixture. It checks wrong-region text, a remaining contradiction, a correction, a missing page and ambiguous identity using the same criteria, then checks remembered outcomes and profile isolation.
+
+```sh
+python tests/integration_saved_retests.py /absolute/hermes-source --receipt-dir /absolute/private-retest-receipts
+```
 
 ## Journey integration check
 
@@ -192,7 +226,7 @@ Form privacy: populated inputs, controls without a displayed placeholder, select
 
 ## Report presentation
 
-The report uses Evident’s editorial palette and an action-first document layout: overview, recommendations, findings with captured evidence, visitor journeys, supporting screenshots, method and a link to explore a deeper report at https://evident.so/. Each image is embedded once; focused source crops carry measured highlights, with an expandable full-page capture. Finding numbers link back to the relevant recommendation. The footer links to evident.so as publisher; the overview explicitly labels the reviewed site. The configured Hermes model writes an evidence-backed cover headline, standfirst and action-first summary in the same final report call. All analytical content comes from that retained Hermes review, with observations, hypotheses and strengths distinguished. System serif/sans/mono fonts keep the HTML self-contained without remote fonts or tracking. The CTA does not upload the report, submit the target or start a scan. This presentation is independently implemented for the plugin; it does not include private evaluation methods or full-service scores.
+The report uses Evident’s palette and an action-first document layout with overview, recommendations, findings with captured evidence, visitor journeys, supporting screenshots, method and a link to explore a deeper report at https://evident.so/. Each image is embedded once; focused source crops carry measured highlights, with an expandable full-page capture. Finding numbers link back to the relevant recommendation. The footer links to evident.so as publisher; the overview explicitly labels the reviewed site. The configured Hermes model writes an evidence-backed cover headline, standfirst and action-first summary in the same final report call. All analytical content comes from that retained Hermes review, with observations, hypotheses and strengths distinguished. System serif/sans/mono fonts keep the HTML self-contained without remote fonts or tracking. The CTA does not upload the report, submit the target or start a scan. This presentation is independently implemented for the plugin; it does not include private evaluation methods or full-service scores.
 
 Image encoding is recorded per run: PNG is retained when it fits; oversized photographic pages use a fresh native browser JPEG at quality85/65/45 with the same measured dimensions and masks. PNG and JPEG artifacts remain inspectable through the same screenshot tool. Model inputs contain source text and element indexes/text; full geometry stays in the retained owner artifact and determines report highlights.
 

@@ -1,25 +1,46 @@
 """Immutable, bounded artifacts under the host's documented plugin data directory."""
 import contextlib
+import fcntl
 import json
 import os
 from pathlib import Path
 import re
+import stat
 import uuid
 
 ID = re.compile(r"[0-9a-f]{32}\Z")
-FILES = re.compile(r"(?:(?:context|context-plan|context-comparison|context-claims(?:-followup)?|context-followups|context-answer-[0-3](?:-retry-1)?|context-source-(?:[0-9]|1[0-6])|plan|execution-plan|planning-[0-9]|control-followup-(?:[0-9]|1[0-9]|2[0-3])|result|explanation|review|scan|demo|model-output|step-(?:[0-9]|1[0-9]|2[0-3]))\.json|(?:view|report|reviewed-report)\.html)\Z")
+FILES = re.compile(r"(?:(?:site-context|answer-history|retest|context|context-plan|context-comparison|context-claims(?:-followup)?|context-followups|context-answer-[0-3](?:-retry-1)?|context-source-(?:[0-9]|1[0-6])|plan|execution-plan|planning-[0-9]|control-followup-(?:[0-9]|1[0-9]|2[0-3])|result|explanation|review|scan|demo|model-output|step-(?:[0-9]|1[0-9]|2[0-3]))\.json|(?:view|report|reviewed-report)\.html)\Z")
 PENDING = re.compile(r"\.pending-[0-9a-f]{32}\Z")
+SCAN_FILES = {"scan-request.json", "website-review.json", "context-started.json", "partial-report.html", "reviewed-report-v2.html", "reviewed-report-v3.html", "reviewed-report-competitors.html", "demo-report-v2.html", "competitor-review.json"}
+
+
+class CaptureBusy(ValueError):
+    pass
 
 
 class Store:
-    def __init__(self, root):
+    def __init__(self, root, database_factory=None):
         self.root = Path(root)
+        self.database_factory = database_factory
         if not hasattr(os, "O_NOFOLLOW"):
             raise RuntimeError("This preview requires a POSIX host with O_NOFOLLOW")
         for part in (self.root, *self.root.parents):
             if part.is_symlink():
                 raise ValueError("Symlinked artifact storage is not supported")
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    @contextlib.contextmanager
+    def history(self):
+        import sqlite3
+        from .site_history import SiteHistory
+        database = self.root / "site-history.db"
+        if any((self.root / name).is_symlink() for name in ("site-history.db", "site-history.db-wal", "site-history.db-shm")):
+            raise ValueError("Symlinked history storage is not supported")
+        connection = self.database_factory() if self.database_factory else sqlite3.connect(database, timeout=5)
+        try:
+            yield SiteHistory(connection, self)
+        finally:
+            connection.close()
 
     @contextlib.contextmanager
     def directory(self, run_id=None):
@@ -40,17 +61,50 @@ class Store:
 
     @contextlib.contextmanager
     def lease(self):
-        import fcntl
         with self.directory() as root:
             fd = os.open(".capture.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=root)
             try:
                 try:
                     fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError as exc:
-                    raise ValueError("A capture or cleanup is already active in this profile") from exc
+                    raise CaptureBusy("A capture or cleanup is already active in this profile") from exc
                 yield
             finally:
                 os.close(fd)
+
+    @contextlib.contextmanager
+    def run_lease(self, run_id):
+        """A process-scoped writer lock. A killed worker leaves no stale 'running' flag."""
+        with self.directory(run_id) as fd:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            yield
+
+    def latest_scan(self, url):
+        from .transport import target
+        def identity(value):
+            parsed, origin, _ = target(value, browser_navigation=True)
+            return origin, parsed.path or "/", parsed.fragment
+        key = identity(url)
+        matches = []
+        with self.directory() as root:
+            ids = [name for name in os.listdir(root) if ID.fullmatch(name)]
+        for run_id in ids:
+            try:
+                with self.directory(run_id) as fd:
+                    # The immutable creation file dates the request, even if an older run finishes later.
+                    created = os.stat("plan.json", dir_fd=fd, follow_symlinks=False).st_mtime_ns
+                request = self.optional(run_id, "scan-request.json") or self.optional(run_id, "scan.json")
+                requested_url = request.get("requested_url") if request else None
+                if not requested_url and self.optional(run_id, "site-context.json"):
+                    # Pre-checkpoint versions retained the resolved navigation URL.
+                    requested_url = self.read(run_id, "plan.json")["steps"][0]["url"]
+                if requested_url and identity(requested_url) == key:
+                    matches.append((created, run_id))
+            except (OSError, KeyError, IndexError, TypeError, AttributeError, ValueError):
+                continue
+        if not matches:
+            raise FileNotFoundError("No retained review for this exact URL in this Hermes profile")
+        return max(matches)[1]
 
     def create(self, plan):
         with self.directory() as root:
@@ -65,7 +119,7 @@ class Store:
         self.write_bytes(run_id, name, json.dumps(value, ensure_ascii=True, indent=2).encode())
 
     def write_bytes(self, run_id, name, data):
-        if not FILES.fullmatch(name):
+        if not FILES.fullmatch(name) and name not in SCAN_FILES:
             raise ValueError("Unknown artifact")
         if len(data) > (20_000_000 if name.endswith(".html") else 4_000_000):
             raise ValueError("Artifact exceeds storage bound")
@@ -77,22 +131,40 @@ class Store:
                     handle.write(data)
                     handle.flush()
                     os.fsync(handle.fileno())
-                # Hard-link publication is atomic and refuses to overwrite an existing artifact.
-                os.link(pending, name, src_dir_fd=directory, dst_dir_fd=directory, follow_symlinks=False)
+                if name == "partial-report.html":
+                    # This derived preview can gain steps. Final reports and source evidence are immutable.
+                    os.replace(pending, name, src_dir_fd=directory, dst_dir_fd=directory)
+                else:
+                    os.link(pending, name, src_dir_fd=directory, dst_dir_fd=directory, follow_symlinks=False)
             finally:
-                os.unlink(pending, dir_fd=directory)
+                with contextlib.suppress(FileNotFoundError):
+                    os.unlink(pending, dir_fd=directory)
+
+    def published_report(self, run_id, name):
+        if name not in {"report.html", "reviewed-report.html", "partial-report.html", "reviewed-report-v2.html", "reviewed-report-v3.html", "reviewed-report-competitors.html", "demo-report-v2.html"}:
+            raise ValueError("Unknown report filename")
+        with self.directory(run_id) as fd:
+            info = os.stat(name, dir_fd=fd, follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= 20_000_000:
+                raise ValueError("Retained report is not a bounded regular file")
+        return str(self.root / run_id / name)
 
     def read(self, run_id, name):
-        if not FILES.fullmatch(name):
+        if not FILES.fullmatch(name) and name not in SCAN_FILES:
             raise ValueError("Unknown artifact")
         with self.directory(run_id) as directory:
             fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=directory)
-            import stat
             with os.fdopen(fd, "rb") as handle:
                 info = os.fstat(handle.fileno())
                 if not stat.S_ISREG(info.st_mode) or info.st_size > 4_000_000:
                     raise ValueError("Not a bounded regular artifact")
                 return json.loads(handle.read(4_000_001))
+
+    def optional(self, run_id, name):
+        try:
+            return self.read(run_id, name)
+        except FileNotFoundError:
+            return None
 
     def inspect(self, run_id):
         plan = self.read(run_id, "plan.json")
@@ -111,6 +183,12 @@ class Store:
         except FileNotFoundError:
             result = {"state": "incomplete", "limitation": "No final receipt; retained steps are inspectable"}
         record = {"run_id": run_id, "plan": plan, "steps": steps, "result": result}
+        for key, filename in (("site_context", "site-context.json"), ("answer_history", "answer-history.json"), ("retest", "retest.json"),
+                              ("request", "scan-request.json"), ("website_review", "website-review.json"), ("competitor_review", "competitor-review.json")):
+            try:
+                record[key] = self.read(run_id, filename)
+            except FileNotFoundError:
+                pass
         try:
             record["explanation"] = self.read(run_id, "explanation.json")
         except FileNotFoundError:
@@ -134,9 +212,9 @@ class Store:
         return record
 
     def delete(self, run_id):
-        with self.lease(), self.directory(run_id) as directory:
+        with self.lease(), self.run_lease(run_id), self.directory(run_id) as directory:
             names = os.listdir(directory)
-            if any(not (FILES.fullmatch(name) or PENDING.fullmatch(name)) for name in names):
+            if any(not (FILES.fullmatch(name) or name in SCAN_FILES or PENDING.fullmatch(name)) for name in names):
                 raise ValueError("Unexpected files; cleanup refused")
             for name in names:
                 os.unlink(name, dir_fd=directory)

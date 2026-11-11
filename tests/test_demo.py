@@ -23,7 +23,7 @@ class DemoTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             ctx = SimpleNamespace(register_tool=lambda **tool: handlers.update({tool["name"]: tool["handler"]}),
                 register_command=lambda *a, **kw: None, register_cli_command=lambda *a, **kw: None,
-                register_skill=lambda *a: None, get_config=lambda key, default=None: settings.get(key, default))
+                register_skill=lambda *a: None, register_hook=lambda *a: None, get_config=lambda key, default=None: settings.get(key, default))
             with patch.dict(sys.modules, {"plugins.plugin_storage": SimpleNamespace(plugin_data_dir=lambda name: Path(tmp).resolve())}):
                 register(ctx)
             for args, config, expected in [
@@ -49,6 +49,10 @@ class DemoTests(unittest.TestCase):
         html = render(after, before)
         self.assertIn('3 / 3', html)
         self.assertEqual(html.count('class="demo-card"'), 3)
+        self.assertEqual(html.count('class="rail"'), 5)
+        self.assertIn('class="report demo-report"', html)
+        self.assertIn('class="brand-mark"', html)
+        self.assertIn('class="sheet-foot"', html)
         self.assertIn('model finding unavailable', html)
         after['result']['environment']['version'] = 'different'
         after['result']['verification'] = compare(before, after)

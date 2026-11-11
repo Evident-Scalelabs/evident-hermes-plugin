@@ -19,6 +19,20 @@ from evidence_candidate.storage import Store, render
 from evidence_candidate.transport import PolicyStop, authorize, fetch, public_address
 
 
+def assert_safe_report_scripts(test, document):
+    import base64
+    import hashlib
+    import html
+    import re
+    from evidence_candidate.report import REPLAY_SCRIPT
+    scripts = re.findall(r"<script[^>]*>(.*?)</script>", document, re.S)
+    test.assertEqual(scripts, [REPLAY_SCRIPT])
+    digest = base64.b64encode(hashlib.sha256(REPLAY_SCRIPT.encode()).digest()).decode()
+    test.assertIn("script-src 'sha256-" + digest + "'", html.unescape(document))
+    test.assertNotIn("script-src 'unsafe-inline'", html.unescape(document))
+    test.assertEqual(document.count("<script"), 1)
+
+
 def plan(url="https://example.com/"):
     return {"objective": "Retest explicit source text", "steps": [{"url": url, "assertions": [
         {"kind": "text_contains", "expected": "Office hours"}, {"kind": "http_status", "expected": 200}]}],
