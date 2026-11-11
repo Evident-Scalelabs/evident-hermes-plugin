@@ -26,13 +26,13 @@ Default safety budgets are eight pages and 600 seconds for capture plus planning
 
 Missing screenshots, invalid exact source quotes or model failure preserve captured evidence and produce an explicitly incomplete result. A missing or incorrect screenshot index is resolved only when its quote uniquely matches a measured text container; otherwise the highlight is omitted. Adjustments are recorded; model interpretation is not rewritten. Planning choices, rejected selections, the navigation trace, original model output and usage remain in the profile-owned run. The report identifies inspected routes, unresolved tasks and uncaptured handoffs.
 
-## Evidence and verification — private preview
+## Evidence and verification
 
 A native Hermes plugin for rendered evidence, screenshots, bounded link navigation and repeatable task assertions. It also retains the lightweight HTTP-source workflow. The plugin observes and verifies; authorized host tools apply separately approved local changes. These are new plugin contracts, not canonical measurement or scoring services.
 
-This candidate is awaiting release, license and naming review. No public license has been selected. There is no connected service, account requirement for deterministic capture, telemetry, editing tool or scheduled job. A conversational host-authored review uses the normal Hermes session. Optional separate model explanation uses the configured Hermes model only after opt-in and explicit consent.
+Licensing has not yet been specified. There is no connected service, account requirement for deterministic capture, telemetry, editing tool or scheduled job. A conversational host-authored review uses the normal Hermes session. Optional separate model explanation uses the configured Hermes model only after opt-in and explicit consent.
 
-## Compatibility and installation for private review
+## Compatibility and installation
 
 Site history uses Hermes's native profile-scoped `plugins.plugin_storage.plugin_db()` and a local SQLite database beside the immutable evidence store. The host must provide that interface. The plugin records business context only through its explicit memory and investigation tools.
 
@@ -226,7 +226,7 @@ Form privacy: populated inputs, controls without a displayed placeholder, select
 
 ## Report presentation
 
-The report uses Evident’s editorial palette and an action-first document layout: overview, recommendations, findings with captured evidence, visitor journeys, supporting screenshots, method and a link to explore a deeper report at https://evident.so/. Each image is embedded once; focused source crops carry measured highlights, with an expandable full-page capture. Finding numbers link back to the relevant recommendation. The footer links to evident.so as publisher; the overview explicitly labels the reviewed site. The configured Hermes model writes an evidence-backed cover headline, standfirst and action-first summary in the same final report call. All analytical content comes from that retained Hermes review, with observations, hypotheses and strengths distinguished. System serif/sans/mono fonts keep the HTML self-contained without remote fonts or tracking. The CTA does not upload the report, submit the target or start a scan. This presentation is independently implemented for the plugin; it does not include private evaluation methods or full-service scores.
+The report uses Evident’s palette and an action-first document layout with overview, recommendations, findings with captured evidence, visitor journeys, supporting screenshots, method and a link to explore a deeper report at https://evident.so/. Each image is embedded once; focused source crops carry measured highlights, with an expandable full-page capture. Finding numbers link back to the relevant recommendation. The footer links to evident.so as publisher; the overview explicitly labels the reviewed site. The configured Hermes model writes an evidence-backed cover headline, standfirst and action-first summary in the same final report call. All analytical content comes from that retained Hermes review, with observations, hypotheses and strengths distinguished. System serif/sans/mono fonts keep the HTML self-contained without remote fonts or tracking. The CTA does not upload the report, submit the target or start a scan. This presentation is independently implemented for the plugin; it does not include private evaluation methods or full-service scores.
 
 Image encoding is recorded per run: PNG is retained when it fits; oversized photographic pages use a fresh native browser JPEG at quality85/65/45 with the same measured dimensions and masks. PNG and JPEG artifacts remain inspectable through the same screenshot tool. Model inputs contain source text and element indexes/text; full geometry stays in the retained owner artifact and determines report highlights.
 
