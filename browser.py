@@ -95,18 +95,25 @@ CONTROL_ID = ('kind','selector','text','group')
 
 
 EVIDENCE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li,tr,td,th,dt,dd,a,button,summary,[role=tab],label,input:not([type=password]),textarea"
-ELEMENT_SCAN = """(els,region) => els.filter(el => el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el => {
+ELEMENT_SCAN = """(els,region) => {
+                                // One document query per id, ancestor and heading for the whole scan, not per element.
+                                const cached = (map,key,make) => { if(!map.has(key)) map.set(key,make()); return map.get(key); };
+                                const ids=new Map(), lists=new Map(), labels=new Map();
+                                const uniqueId = id => cached(ids,id,()=>document.querySelectorAll('#'+CSS.escape(id)).length===1);
+                                const label = h => h ? cached(labels,h,()=>h.innerText.trim().slice(0,240)) : '';
+                                const pageHeading = label(document.querySelector('h1'));
+                                return els.filter(el => el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el => {
                                     const parts=[];
                                     for(let node=el;node && node.nodeType===1;node=node.parentElement){
-                                        if(node.id && document.querySelectorAll('#'+CSS.escape(node.id)).length===1){parts.unshift('#'+CSS.escape(node.id));break;}
+                                        if(node.id && uniqueId(node.id)){parts.unshift('#'+CSS.escape(node.id));break;}
                                         const peers=node.parentElement ? [...node.parentElement.children].filter(x=>x.tagName===node.tagName) : [node];
                                         parts.unshift(node.tagName.toLowerCase()+':nth-of-type('+(peers.indexOf(node)+1)+')');
                                     }
-                                    const heading = root => [...root.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(h=>h!==el && !el.contains(h))?.innerText.trim().slice(0,240) || '';
+                                    const heading = root => label(cached(lists,root,()=>[...root.querySelectorAll('h1,h2,h3,h4,h5,h6')]).find(h=>!el.contains(h)));
                                     let regionHeading='';
                                     for(let parent=el.parentElement;parent && !regionHeading;parent=parent.parentElement)regionHeading=heading(parent);
                                     const identity={selector:parts.join(' > '),tag:el.tagName,
-                                        page_heading:document.querySelector('h1')?.innerText.trim().slice(0,240) || '',
+                                        page_heading:pageHeading,
                                         region_heading:regionHeading,
                                         siblings:el.parentElement ? [...el.parentElement.children].map(n=>n.tagName).join(',').slice(0,1200) : ''};
                                     const r = el.getBoundingClientRect();
@@ -119,7 +126,7 @@ ELEMENT_SCAN = """(els,region) => els.filter(el => el.checkVisibility({checkOpac
                                         x: Math.max(0,r.x+scrollX), y: Math.max(0,r.y+scrollY),
                                         width: Math.max(0,Math.min(innerWidth,r.right)-Math.max(0,r.x)),
                                         height: Math.max(0,Math.min(document.documentElement.scrollHeight,r.bottom+scrollY)-Math.max(0,r.y+scrollY))};
-                                }).filter(e => e.text.trim() && e.width > 0 && e.height > 0 && e.y>=region.top && e.y+e.height<=region.top+region.height).slice(0,600)"""
+                                }).filter(e => e.text.trim() && e.width > 0 && e.height > 0 && e.y>=region.top && e.y+e.height<=region.top+region.height).slice(0,600); }"""
 
 
 def validate_browser_server_url(value):

@@ -16,9 +16,18 @@ def active_controls(step):
             for control in step.get("controls", []) if control.get("active")]
 
 
+def same_identity(observed, frozen, confirmed):
+    """A heading that now reads as a confirmed statement is the requested correction, not another page."""
+    return set(observed) == set(frozen) and all(
+        observed[key] == value or (key in ("page_heading", "region_heading") and normalized(observed[key] or "") in confirmed)
+        for key, value in frozen.items())
+
+
 def evaluate(definition, record):
     results = []
     steps = {step["index"]: step for step in record["steps"]}
+    # Headings are retained up to 240 characters; a longer corrected heading stays inconclusive.
+    confirmed = {normalized(criterion["expected_text"]) for criterion in definition["criteria"]}
     for criterion in definition["criteria"]:
         step = steps.get(criterion["step"], {})
         matches = [(index, element) for index, element in enumerate(step.get("elements", []))
@@ -34,7 +43,7 @@ def evaluate(definition, record):
         else:
             index, element = matches[0]
             result.update(element=index, observed=element["text"])
-            if element.get("identity") != criterion["identity"] or element.get("text_truncated", True):
+            if not same_identity(element["identity"], criterion["identity"], confirmed) or element.get("text_truncated", True):
                 result["reason"] = "The source identity changed or its text is incomplete"
             else:
                 result["status"] = "passed" if normalized(element["text"]) == normalized(criterion["expected_text"]) else "failed"
@@ -96,7 +105,8 @@ def save_test(store, run_id, finding, criteria, confirm):
     if baseline["status"] == "inconclusive":
         raise ValueError("The source identities are ambiguous or unavailable in this baseline")
     with store.history() as history:
-        definition["site_revision"] = history.recall(url)["comparison_revision"]
+        definition["site_revision"] = history.comparison_revision(url)
+        definition["facts_sha256"] = history.facts_digest(url)
         test_id = history.save_test(url, definition)
     return {"test_id": test_id, "definition": definition, "baseline": baseline}
 
@@ -104,14 +114,14 @@ def save_test(store, run_id, finding, criteria, confirm):
 async def verify_test(store, test_id, change_context, origins, fixture_origin, **options):
     with store.history() as history:
         definition = history.test(test_id)
-        current_revision = history.recall(definition["site_url"])["comparison_revision"]
+        facts = history.facts_digest(definition["site_url"])
     try:
         baseline = store.inspect(definition["source_run"])
     except (OSError, ValueError):
         return {"state": "inconclusive", "test_id": test_id, "detail": "Baseline evidence is unavailable"}
-    if current_revision != definition["site_revision"]:
+    if facts != definition.get("facts_sha256"):
         return {"state": "inconclusive", "test_id": test_id,
-                "detail": "Site facts or goals changed; confirm a new test for the current conditions"}
+                "detail": "Confirmed site facts changed; confirm a new test for the current conditions"}
     # This invocation authorizes replay of the saved public site. Private origins still
     # require the existing exact fixture setting and all transport checks remain active.
     public_origins = list(origins)
@@ -123,7 +133,7 @@ async def verify_test(store, test_id, change_context, origins, fixture_origin, *
     before_checks, after_checks = evaluate(definition, baseline), evaluate(definition, after)
     comparable = result.get("verification", {}).get("comparable", False) and before_checks["status"] != "inconclusive"
     with store.history() as history:
-        if history.recall(definition["site_url"])["comparison_revision"] != current_revision:
+        if history.facts_digest(definition["site_url"]) != facts:
             comparable = False
     if not comparable:
         after_checks["status"] = "inconclusive"
@@ -134,7 +144,8 @@ async def verify_test(store, test_id, change_context, origins, fixture_origin, *
                "meaning": "The same user-confirmed statements in the same retained source regions and replayed control states."}
     store.write(result["run_id"], "retest.json", receipt)
     with store.history() as history:
-        history.record_run(definition["site_url"], {**after, "retest": receipt}, current_revision)
+        history.record_run(definition["site_url"], {**after, "retest": receipt},
+                           history.comparison_revision(definition["site_url"]))
     from .report import export_report
     path = export_report(store, result["run_id"])
     return {"state": after_checks["status"], "run_id": result["run_id"], "test_id": test_id,

@@ -543,7 +543,11 @@ async def collect(ctx,store,run_id, *, previous=None, memory=None):
         raise
     except Exception as exc:value['issues'].append(str(exc)[:250] if isinstance(exc,ValueError) else type(exc).__name__)
     finally:
-        store.write(run_id,'context.json',value)
+        history = None
         if previous and previous.get("context"):
-            store.write(run_id, "answer-history.json", compare_answers(previous["context"], value, previous["run_id"]))
+            # Optional comparison: a malformed older record must not replace this review's outcome or a cancellation.
+            try:history = compare_answers(previous["context"], value, previous["run_id"])
+            except Exception as exc:value['issues'].append('Answer history unavailable: '+type(exc).__name__)
+        store.write(run_id,'context.json',value)
+        if history:store.write(run_id, "answer-history.json", history)
     return value

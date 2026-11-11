@@ -73,6 +73,23 @@ class HistoryTests(unittest.TestCase):
             with store.history() as history, self.assertRaisesRegex(ValueError, "another site"):
                 history.remember("https://other.example/", "fact", "fact", "Unknown", source_run=run)
 
+    def test_goal_needs_no_key_and_only_facts_change_the_saved_test_fingerprint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with Store(Path(tmp).resolve()).history() as history:
+                history.remember(URL, "billing", "fact", "Annual billing")
+                facts, revision = history.facts_digest(URL), history.comparison_revision(URL)
+                self.assertEqual(history.remember(URL, None, "goal", "Choose a plan")["key"], "goal")
+                history.remember(URL, "rival", "competitor", {"name": "Rival", "url": "https://rival.example/",
+                                                              "disposition": "exclude", "reason": "Another market"})
+                history.forget(URL, "rival")
+                self.assertEqual(history.facts_digest(URL), facts)
+                self.assertGreater(history.comparison_revision(URL), revision)
+                self.assertEqual(history.comparison_revision(URL), history.recall(URL)["comparison_revision"])
+                history.remember(URL, "billing", "fact", "Monthly billing")
+                self.assertNotEqual(history.facts_digest(URL), facts)
+                history.remember(URL, "billing", "fact", "Annual billing")
+                self.assertEqual(history.facts_digest(URL), facts)
+
     def test_recalled_retest_retains_its_outcome(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = Store(Path(tmp).resolve())
@@ -129,6 +146,19 @@ class RetestTests(unittest.TestCase):
                     else:
                         step["elements"][0]["text_truncated"] = True
                     self.assertEqual(evaluate(saved["definition"], record)["status"], "inconclusive")
+
+    def test_confirmed_heading_correction_keeps_the_source_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp).resolve())
+            run = fixture(store)
+            saved = save_test(store, run, 0, [{"step": 0, "element": 0, "expected_text": "$145 per team"}], True)
+            record = store.inspect(run)
+            element = record["steps"][0]["elements"][0]
+            # The corrected element is itself the page heading, so its own identity carries the new text.
+            element["text"] = element["identity"]["page_heading"] = " $145  per team"
+            self.assertEqual(evaluate(saved["definition"], record)["status"], "passed")
+            element["identity"]["siblings"] = "H2,P,P"
+            self.assertEqual(evaluate(saved["definition"], record)["status"], "inconclusive")
 
     def test_confirmation_and_evidence_identity_required(self):
         with tempfile.TemporaryDirectory() as tmp:
