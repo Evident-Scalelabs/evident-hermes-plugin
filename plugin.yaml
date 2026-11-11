@@ -1,0 +1,59 @@
+name: evident-evidence
+version: 0.18.1
+description: "Is this evident? Explore how a website comes across to its visitors and buyers in one visual report."
+python_dependencies:
+  - playwright==1.64.0
+provides_tools:
+  - evident_scan
+  - evident_demo
+  - evident_report
+  - evident_browse
+  - evident_screenshot
+  - evident_explain
+  - evident_observe
+  - evident_verify
+  - evident_inspect
+  - evident_delete
+provides_hooks: []
+capabilities: []
+config_schema:
+  reuse_hermes_browser:
+    type: bool
+    default: true
+    description: Try a dedicated native Hermes session via the documented supervisor capture API; retain a capability receipt and use the isolated worker when unavailable
+  allow_hosted_browser:
+    type: bool
+    default: false
+    description: Permit the explicitly selected Hermes hosted browser provider; may incur provider charges and sends visited URLs to that provider. No credential autodetection or CAPTCHA bypass.
+  show_evident_cta:
+    type: bool
+    default: true
+    description: Include the separate optional deep-report invitation; no upload, tracking or automatic scan
+  review_max_pages:
+    type: int
+    default: 8
+    description: Maximum unique pages for a requested journey review, from 2 to 12; a safety budget, not a page quota
+  review_seconds:
+    type: int
+    default: 600
+    description: Total browser exploration and planning budget, from 60 to 900 seconds; final report model call has a separate 120 second bound
+  browser_server_url:
+    type: str
+    default: ""
+    description: Optional operator-managed loopback Playwright server for an isolated browser worker; empty launches sandboxed Chromium locally. Never a personal browser or CDP endpoint.
+  browser_enabled:
+    type: bool
+    default: false
+    description: Permit fresh managed headless Chromium for constrained anonymous rendering; never personal Chrome or profiles
+  allow_model_interpretation:
+    type: bool
+    default: false
+    description: Permit requested website reports using public text and screenshots with the configured host model, plus explicitly consented text explanations; may incur cost
+  authorized_origins:
+    type: list
+    default: []
+    description: Exact public HTTPS origins the operator authorizes for anonymous read-only capture; no paths or trailing slash
+  fixture_origin:
+    type: str
+    default: ""
+    description: Optional single isolated fixture origin, e.g. http://127.0.0.1:8765; never a general private-network grant
