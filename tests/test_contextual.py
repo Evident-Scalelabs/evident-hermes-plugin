@@ -21,7 +21,7 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
             value['competitors'].append({**value['competitors'][0], 'url': 'javascript:invalid'})
         comparison={'summary':'Fixture comparison','selection_caveat':'Confirm relevance; rejection is not proof of positioning failure.',
             'answers':[{'index':i,'status':'tension','answer_position':'Open daily','site_position':'Weekdays only','insight':'Compare terms','next_step':'Confirm conditions','answer_quote':'Open daily','site_evidence':[{'step':0,'quote':'Invented' if invalid else 'Open weekdays'}]} for i in range(4)],
-            'competitors':[{'index':0,'site_position':'Weekdays only','alternative_position':'Open daily','insight':'Different hours for the same task','source_quote':'Open daily','site_evidence':[{'step':0,'quote':'Open weekdays'}]}]}
+            'competitors':[{'index':0,'site_position':'Weekdays only','alternative_position':'Open daily','insight':'Different hours for the same task','next_step':'Test clearer opening hours beside the booking link.','source_quote':'Open daily','site_evidence':[{'step':0,'quote':'Open weekdays'}]}]}
         class Model:
             async def acomplete_structured(self, **kw):
                 seen.append(kw);name=kw['purpose'].split('.')[-1]
@@ -306,3 +306,49 @@ class ClaimBindingTests(unittest.TestCase):
         links,_=p.public_links('https://example.com/')
         self.assertEqual([r['url'] for r in links],['https://example.com/'+p for p in ('guide.html','guide.txt','guide','guide.php')])
         self.assertEqual([r['index'] for r in links],list(range(len(links))))
+
+
+class CompetitorPageTests(unittest.IsolatedAsyncioTestCase):
+    async def test_saved_competitor_page_uses_exact_sources_and_reuses_paid_output(self):
+        from evidence_candidate.contextual import review_competitors
+        from evidence_candidate.report import export_report
+        payload = {
+            "summary":"Compare the joining decision.",
+            "selection_caveat":"Confirm whether this serves the same buyer.",
+            "competitors":[{"index":0,"site_position":"Open weekdays","alternative_position":"Open daily",
+                "insight":"The observed service windows differ.","next_step":"Test a clear service-hours note before the next step.",
+                "source_quote":"Open daily","site_evidence":[{"step":0,"quote":"Open weekdays"}]}]}
+        model=SimpleNamespace(acomplete_structured=None)
+        calls=[]
+        async def response(**kwargs):
+            calls.append(kwargs)
+            return SimpleNamespace(parsed=copy.deepcopy(payload), text=json.dumps(payload), provider="fixture", model="fixture", usage=Usage())
+        model.acomplete_structured=response
+        ctx=SimpleNamespace(llm=model,get_config=lambda key,default=None: key=="allow_model_interpretation")
+        with tempfile.TemporaryDirectory() as temp:
+            store=Store(Path(temp).resolve())
+            run=store.create(plan("https://site.example/"))
+            store.write(run,"result.json",{"state":"complete","limitations":[]})
+            store.write(run,"step-0.json",{"index":0,"state":"observed","source_text":"Open weekdays","fetched_url":"https://site.example/","assertions":[]})
+            context={"state":"complete","plan":{"competitors":[{"index":0,"name":"Alternative","url":"https://alternative.example/","reason":"Same decision","relationship":"possible_direct"}]},
+                     "sources":[{"index":0,"requested_url":"https://alternative.example/","url":"https://alternative.example/","state":"captured","text":"Open daily"}],
+                     "answers":[],"comparison":None}
+            store.write(run,"context.json",context)
+            first=await review_competitors(ctx,store,run)
+            again=await review_competitors(ctx,store,run)
+            self.assertEqual(first,again)
+            self.assertEqual(len(calls),1)
+            document=Path(export_report(store,run)).read_text()
+            self.assertIn("Test a clear service-hours note before the next step.",document)
+            self.assertIn("1 comparisons with quoted evidence",document)
+            self.assertIn('id="alternatives"',document)
+            self.assertIn("What to test",document)
+            payload["competitors"][0]["source_quote"]="Invented opening time"
+            bad=store.create(plan("https://site.example/"))
+            for name in ("result.json","step-0.json","context.json"):
+                store.write(bad,name,store.read(run,name))
+            result=await review_competitors(ctx,store,bad)
+            self.assertEqual(result["state"],"partial")
+            self.assertEqual(result["comparison"]["competitors"],[])
+            html=Path(export_report(store,bad)).read_text()
+            self.assertNotIn("Test a clear service-hours note before the next step.",html.split('id="alternatives"')[1].split('id="coverage"')[0])

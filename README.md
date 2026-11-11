@@ -14,7 +14,7 @@ You can also say **“Evident, review this: https://example.com/”** with your 
 
 Send the URL and Hermes follows the journey with that buyer and decision in mind. A returning site uses its saved goal. A new URL starts a general perception scan when you leave the focus open. You can request a new goal or a fresh general review. “Is my website evident?” opens the same conversation. The wording of Hermes’s replies can vary with its configured model.
 
-You get **one offline HTML report** with highlighted screenshots, actionable findings and the limits of what Hermes could verify. By default the report also includes independent AI answers and suggested alternatives. You can ask for a website-only review.
+You get **one offline HTML report** with highlighted screenshots, actionable findings and the limits of what Hermes could verify. By default the report also includes independent AI answers and a dedicated Competitors page with suggested alternatives, quoted contrasts, and concrete changes to test. You can ask for a website-only review.
 
 Enable `browser_enabled` and `allow_model_interpretation` once in this plugin's settings. A report request then authorizes its public-page capture and host-model processing, which may incur cost. The plugin uses the supported `ctx.llm.acomplete_structured` image/text API; it never reads model credentials or overrides provider/model settings. A vision-capable configured model is required. Capture-only `observe`/`evident_browse` still works without model calls. `demo` reviews a fictional buying journey, then verifies declared fixture changes in one visual report.
 
@@ -50,7 +50,7 @@ The first version compares exact rendered statements with whitespace normalized.
 hermes evident verify TEST_ID --saved --change "The site owner corrected the confirmed pricing statement"
 ```
 
-Comparable repeat reviews reuse their four saved buyer questions. The report compares individual answers, source-support counts, citations and suggested competitors. It records the actual model route and requested sampling settings. Changed conditions are labelled incomparable. Competitor include/exclude corrections guide future suggestions. Individual samples can vary even with identical settings.
+Comparable repeat reviews reuse their four saved buyer questions. The report compares individual answers, source-support counts, citations and suggested competitors. It records the actual model route and requested sampling settings. Changed conditions are labelled incomparable. Competitor include/exclude corrections guide future suggestions. Individual samples can vary even with identical settings. For more detail on a saved review, ask Hermes to expand its competitor page. It can call `evident_finish` with `competitors: true` for one saved analysis of the already captured public sources. This adds a model call and preserves the original review. Competitor choices remain editable through site memory.
 
 Reports include a previous/next screenshot replay using retained images, measured highlights and the actual sequence of pages and controls. A fixed, hash-authorized offline script drives the viewer. Three leading actions stay prominent and further findings are expandable. Canonical and robots declarations are recorded on visited pages with their measurement limits.
 

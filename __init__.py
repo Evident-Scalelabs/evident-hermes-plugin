@@ -92,15 +92,21 @@ def register(ctx):
 
     async def finish(args, **kwargs):
         from .interpretation import chat_work_budget, finish_scan
-        if set(args) != {"run_id"}:
+        if set(args) - {"competitors"} != {"run_id"} or type(args.get("competitors", False)) is not bool:
             return json.dumps({"state": "unavailable", "detail": "Supply the run ID returned by evident_scan."})
         try:
+            if args.get("competitors"):
+                from .contextual import review_competitors
+                from .recovery import report_result
+                retained = store()
+                await review_competitors(ctx, retained, args["run_id"])
+                return json.dumps(report_result(retained, retained.inspect(args["run_id"])))
             return json.dumps(await finish_scan(ctx, store(), args["run_id"], chat_work_budget()))
         except BlockingIOError:
             return json.dumps({"state": "running", "run_id": args["run_id"], "detail": "This run has an active writer. Inspect it again without starting a new scan."})
         except CaptureBusy as exc:
             return json.dumps({"state": "awaiting_context", "run_id": args["run_id"], "detail": str(exc) + ". Continue this ID when the capture finishes."})
-        except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError, sqlite3.Error):
             return json.dumps({"state": "unavailable", "detail": "Inspect this run for retained evidence. A continuation requires an authorized saved website review and model opt-in."})
 
     async def capture(args, **kwargs):
@@ -257,7 +263,7 @@ def register(ctx):
                       "description": "Include independent AI answers and suggested alternatives with public source checks. Set false when the user requests website-only analysis."},
           "max_pages": {"type": "integer", "minimum": 2, "maximum": 12},
           "seconds": {"type": "integer", "minimum": 60, "maximum": 900}}),
-        ("evident_finish", finish, True, "Finish the AI answers and alternatives already requested for this website run. Use the exact ID from evident_scan, including after reconnecting. Reuses retained evidence and returns one HTML report. Already started comparison work is never resampled by this command.", {"run_id": {"type": "string"}}),
+        ("evident_finish", finish, True, "Finish the AI answers and alternatives already requested for this website run. Use the exact ID from evident_scan, including after reconnecting. Reuses retained evidence and returns one HTML report. Already started comparison work is never resampled by this command. Only when the user asks for more competitor detail, competitors=true adds one bounded analysis of the already captured competitor pages and saves it for reuse.", {"run_id": {"type": "string"}, "competitors": {"type": "boolean"}}),
         ("evident_demo", demo, True, "Show the Evident perception-gap demo when the user asks to see or run an example, e.g. ‘Show me the Evident demo’. No URL needed. Runs the fictional Trailnote buying journey with the configured model, applies edits only to its own temporary fixture, and replays the same checks. Requires browser/model opt-ins and may incur model cost. Return a short summary and the exact delivery line on its own line. A real site review uses evident_scan; a question about the plugin can be answered without running either.", {}),
         ("evident_report", report, False, "Save a host-authored evidence-linked review and return an offline HTML report with website screenshots and numbered annotations. Inspect text AND screenshots first. Cite exact observed quotes; no scores, canonical findings or invented research. Distinguish hypotheses and unknowns. Return the file to the user, not its source code. One immutable review per run.", {"run_id": {"type": "string"}, "review": REVIEW_SCHEMA}),
         ("evident_browse", browse, True, "Capture rendered text and bounded full-page screenshots in fresh managed headless Chromium. First step opens a URL; later steps follow explicit anchor selectors. Supported local disclosures, tabs and outside-form grouped radios can be opened/selected from retained controls, with new requests blocked. No forms or transactions. Origin and resource limits apply.", {"plan": {"type": "object", "description": "mode: browser; objective; viewport: {width,height}; limits: {seconds:1..900,resources:1..400,bytes_per_resource:256..4194304}; steps: first {action:open,url,assertions:[{kind:visible_text,expected}]}, then {action:follow_link,selector,assertions} or {action:scroll,offset:0..12000,assertions:[]}. 1..24 steps. Other supported steps: {action:return_to,url,assertions:[]} for an already observed URL; {action:focus_heading,heading,assertions:[]}; {action:follow_href,href,assertions:[{kind:url_equals,expected}]}. Optional {action:activate_control,control:{kind:disclosure|expanded|tab|radio,selector,text,group},assertions:[{kind:control_active,expected:true}]} uses an exact identity from observed controls, revalidated before clicking. Optional purpose and expected text describe the visitor task. Assertions may be empty for observation-only review; use the existing task objective, never fabricate expected text."}}),

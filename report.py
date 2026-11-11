@@ -80,7 +80,7 @@ STYLE += """
 
 STYLE += """
 /* Original evidence exhibits: categorical relationships, never invented scores. */
-.exhibit{margin:24px 0;padding:24px;background:#edf2fb;border-radius:4px;border:1px solid #d6e0f2}.exhibit figcaption{font:600 15px/1.4 var(--sans);margin-bottom:22px}.exhibit figcaption .label{color:var(--blue)}.exhibit-nodes{display:flex;align-items:stretch;gap:38px}.exhibit-node{position:relative;flex:1;min-width:0;padding:20px 18px;background:white;border-top:4px solid var(--blue)}.exhibit-node+.exhibit-node:before{content:'→';position:absolute;left:-30px;top:35%;color:var(--blue);font:26px var(--serif)}.exhibit.contrast .exhibit-node+.exhibit-node:before{content:'↔'}.exhibit.contrast .exhibit-node:nth-child(even){border-top-color:var(--warn)}.exhibit-node.proposed{border:2px dashed var(--purple);border-top-width:4px}.exhibit-node .node-text{font:28px/1.16 var(--serif);letter-spacing:-.025em;margin:12px 0 16px}.exhibit-node a{font:10px var(--mono);margin-right:10px}.exhibit .caveat{margin:16px 0 0}.compact-action{padding:17px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:90px 1fr;gap:18px}.compact-action p{margin:0;font-size:15px}.compact-action .label{margin:4px 0 0}.note-head h2{font-size:29px}.capture-head h3{font-size:13px}.capture-head .source{margin-bottom:6px}.route-stations{list-style:none;margin:22px 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}.route-station{position:relative;min-width:0;border-top:2px solid var(--blue);padding:15px 8px 8px 0}.route-station:before{content:'';position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--blue)}.route-station:not(:last-child):after{content:'→';position:absolute;right:-22px;top:-15px;color:var(--blue);font:22px var(--sans)}.route-station a{font:600 13px/1.4 var(--sans);display:block;overflow-wrap:anywhere;text-decoration:none}.route-station .label{font-size:9px}.state-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.state-chips a{font:9px var(--mono);border:1px solid #cbd5ed;background:#fff;padding:4px 6px}.journey{padding:20px 0}.journey h3{font-size:17px}.journey .badge{float:right;margin:0 0 8px 12px}.journey p{font-size:13px;max-width:80ch}.evidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:24px 0}.evidence-thumb{border:1px solid var(--line);background:white;color:var(--ink);text-decoration:none;padding:8px;min-width:0}.evidence-thumb svg{display:block;width:100%;height:140px;background:var(--soft);border-bottom:1px solid var(--line)}.evidence-thumb span{font:10px/1.4 var(--mono);display:block;margin-top:8px;overflow-wrap:anywhere}.evidence-detail>summary{font-size:13px}.evidence-detail>.capture{margin-top:0}.answer-card .exhibit-nodes{gap:24px}.answer-card .exhibit-node{padding:12px;border-top-width:2px;background:var(--soft)}.answer-card .exhibit-node+.exhibit-node:before{left:-21px;font-size:19px}.answer-card .node-text{font:20px/1.25 var(--serif)}.alignment-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:22px 0}.alignment-cell{padding:14px 12px;border-top:5px solid #94a3b8;background:var(--soft);font:10px/1.5 var(--mono);text-decoration:none;color:var(--ink)}.alignment-cell.tension{border-color:#d97706}.alignment-cell.omission{border-color:var(--purple)}.alignment-cell.consistent{border-color:var(--cyan)}.alignment-cell b{display:block;font-size:12px;margin:6px 0}.answer-grid{margin-top:16px}.answer-card h3{font-size:16px}.answer-card .next-action{padding:10px 12px}.answer-card .source{margin:10px 0}.rival-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rival-card{min-width:0;border:1px solid var(--line);padding:20px;background:white}.rival-card h3{font:26px/1.2 var(--serif);margin:10px 0 16px}.rival-comparison{position:relative;padding:0 0 0 18px;border-left:2px solid var(--purple);margin:20px 0}.rival-comparison>div{position:relative;margin:20px 0}.rival-comparison>div:before{content:'';position:absolute;width:8px;height:8px;left:-23px;top:4px;border-radius:50%;background:var(--purple)}.rival-comparison p{font-size:14px;line-height:1.4;margin:0}.rival-card .difference{font-size:13px;color:var(--sub)}.cover .standfirst{max-width:55ch}.report .stats{margin:22px 0}.overview-goal{font-size:12px;color:var(--sub)}.ai-sheet{border-top:5px solid var(--purple)}.method-summary{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.method-summary span{border-left:3px solid var(--cyan);padding:8px 14px;background:var(--soft);font-size:12px}
+.exhibit{margin:24px 0;padding:24px;background:#edf2fb;border-radius:4px;border:1px solid #d6e0f2}.exhibit figcaption{font:600 15px/1.4 var(--sans);margin-bottom:22px}.exhibit figcaption .label{color:var(--blue)}.exhibit-nodes{display:flex;align-items:stretch;gap:38px}.exhibit-node{position:relative;flex:1;min-width:0;padding:20px 18px;background:white;border-top:4px solid var(--blue)}.exhibit-node+.exhibit-node:before{content:'→';position:absolute;left:-30px;top:35%;color:var(--blue);font:26px var(--serif)}.exhibit.contrast .exhibit-node+.exhibit-node:before{content:'↔'}.exhibit.contrast .exhibit-node:nth-child(even){border-top-color:var(--warn)}.exhibit-node.proposed{border:2px dashed var(--purple);border-top-width:4px}.exhibit-node .node-text{font:28px/1.16 var(--serif);letter-spacing:-.025em;margin:12px 0 16px}.exhibit-node a{font:10px var(--mono);margin-right:10px}.exhibit .caveat{margin:16px 0 0}.compact-action{padding:17px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:90px 1fr;gap:18px}.compact-action p{margin:0;font-size:15px}.compact-action .label{margin:4px 0 0}.note-head h2{font-size:29px}.capture-head h3{font-size:13px}.capture-head .source{margin-bottom:6px}.route-stations{list-style:none;margin:22px 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}.route-station{position:relative;min-width:0;border-top:2px solid var(--blue);padding:15px 8px 8px 0}.route-station:before{content:'';position:absolute;top:-6px;left:0;width:10px;height:10px;border-radius:50%;background:var(--blue)}.route-station:not(:last-child):after{content:'→';position:absolute;right:-22px;top:-15px;color:var(--blue);font:22px var(--sans)}.route-station a{font:600 13px/1.4 var(--sans);display:block;overflow-wrap:anywhere;text-decoration:none}.route-station .label{font-size:9px}.state-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.state-chips a{font:9px var(--mono);border:1px solid #cbd5ed;background:#fff;padding:4px 6px}.journey{padding:20px 0}.journey h3{font-size:17px}.journey .badge{float:right;margin:0 0 8px 12px}.journey p{font-size:13px;max-width:80ch}.evidence-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin:24px 0}.evidence-thumb{border:1px solid var(--line);background:white;color:var(--ink);text-decoration:none;padding:8px;min-width:0}.evidence-thumb svg{display:block;width:100%;height:140px;background:var(--soft);border-bottom:1px solid var(--line)}.evidence-thumb span{font:10px/1.4 var(--mono);display:block;margin-top:8px;overflow-wrap:anywhere}.evidence-detail>summary{font-size:13px}.evidence-detail>.capture{margin-top:0}.answer-card .exhibit-nodes{gap:24px}.answer-card .exhibit-node{padding:12px;border-top-width:2px;background:var(--soft)}.answer-card .exhibit-node+.exhibit-node:before{left:-21px;font-size:19px}.answer-card .node-text{font:20px/1.25 var(--serif)}.alignment-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:22px 0}.alignment-cell{padding:14px 12px;border-top:5px solid #94a3b8;background:var(--soft);font:10px/1.5 var(--mono);text-decoration:none;color:var(--ink)}.alignment-cell.tension{border-color:#d97706}.alignment-cell.omission{border-color:var(--purple)}.alignment-cell.consistent{border-color:var(--cyan)}.alignment-cell b{display:block;font-size:12px;margin:6px 0}.answer-grid{margin-top:16px}.answer-card h3{font-size:16px}.answer-card .next-action{padding:10px 12px}.answer-card .source{margin:10px 0}.rival-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rival-card{min-width:0;border:1px solid var(--line);padding:20px;background:white}.rival-card h3{font:26px/1.2 var(--serif);margin:10px 0 16px}.rival-comparison{position:relative;padding:0 0 0 18px;border-left:2px solid var(--purple);margin:20px 0}.rival-comparison>div{position:relative;margin:20px 0}.rival-comparison>div:before{content:'';position:absolute;width:8px;height:8px;left:-23px;top:4px;border-radius:50%;background:var(--purple)}.rival-comparison p{font-size:14px;line-height:1.4;margin:0}.rival-card .difference{font-size:13px;color:var(--sub)}.competitor-sheet{border-top:5px solid var(--cyan)}.rival-card h3 a{color:var(--deep);text-decoration:none}.rival-card .rival-relevance{font-size:12px;line-height:1.5;color:var(--sub);min-height:5em}.rival-card .next-action{margin:16px -8px;padding:14px;background:var(--tint);border-left:3px solid var(--blue)}.rival-card .next-action p{font-size:13px;line-height:1.5;margin-bottom:0}.source-directory{margin-top:20px}.cover .standfirst{max-width:55ch}.report .stats{margin:22px 0}.overview-goal{font-size:12px;color:var(--sub)}.ai-sheet{border-top:5px solid var(--purple)}.method-summary{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}.method-summary span{border-left:3px solid var(--cyan);padding:8px 14px;background:var(--soft);font-size:12px}
 @media screen and (max-width:899px){.exhibit{padding:18px 14px}.exhibit-nodes{flex-direction:column;gap:30px}.exhibit-node+.exhibit-node:before{left:45%;top:-29px;transform:rotate(90deg)}.exhibit.contrast .exhibit-node+.exhibit-node:before{transform:none}.exhibit-node .node-text{font-size:26px}.compact-action{grid-template-columns:1fr;gap:4px}.route-stations{grid-template-columns:1fr;margin-left:5px;gap:12px}.route-station{border-top:0;border-left:2px solid var(--blue);padding:12px 0 12px 18px}.route-station:before{left:-6px;top:18px}.route-station:not(:last-child):after{left:-9px;right:auto;top:auto;bottom:-17px;transform:rotate(90deg)}.evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.evidence-thumb svg{height:100px}.rival-grid{grid-template-columns:1fr}.alignment-strip{grid-template-columns:repeat(2,1fr)}.answer-card .exhibit-node+.exhibit-node:before{left:45%;top:-25px}.journey .badge{float:none}.exhibit-node{flex:auto}}
 """
 
@@ -241,7 +241,9 @@ def export_report(store, run_id, *, record=None):
                   "error": record.get("scan", {}).get("error", "No final scan receipt. Only retained evidence is shown.")}}
     name = "partial-report.html" if partial_snapshot else "reviewed-report.html" if record.get("review") else "report.html"
     if not partial_snapshot and record.get("review") and (record.get("context") or record.get("answer_history")):
-        name = "reviewed-report-v2.html"  # Preserve previously delivered HTML while serving the clearer presentation.
+        name = "reviewed-report-v3.html"  # Preserve previously delivered HTML while serving the clearer presentation.
+        if record.get("competitor_review"):
+            name = "reviewed-report-competitors.html"
     if not partial_snapshot:
         try:
             return store.published_report(run_id, name)
@@ -684,26 +686,47 @@ def render(record, baseline=None):
                 else:trail+='<li>'+esc(r.get('detail','Source follow-up unavailable'))+'</li>'
             body+='<details class="source-investigation"><summary>Followed sources &amp; limits</summary><p>Hermes follows up to six links observed on cited pages to check unresolved factual claims. These additional sources were found after the independent answers. Classification and original answer text stay fixed.</p><p class="source">'+esc(enrichment['followup_state'].replace('_',' '))+'</p><ul>'+trail+'</ul></details>'
         sheet("ai-context", "AI answers", body, "ai-sheet")
-        body=heading("The consideration set", "Your offer.<br><em>The alternatives beside it.</em>", "Model-suggested candidates, not a confirmed competitor set or ranking.")
-        body+='<p class="source">Reviewed site: '+esc(host)+' · Category: '+esc((enrichment.get('plan') or {}).get('category','Unconfirmed'))+'</p>'
+        competitor_review = record.get("competitor_review", {})
+        rival_comparison = competitor_review.get("comparison") or comparison
+        body=heading("Competitors", "Who else enters<br><em>the decision.</em>",
+                     "Suggested competitors for this buyer and goal. Confirm the ones that matter to you.")
+        if competitor_review.get("comparison"):
+            body += '<p class="standfirst">'+esc(rival_comparison.get("summary",""))+'</p>'
+        body += '<p class="source">Reviewed site · '+esc(host)+'</p>'
         rows = ''
-        alternatives = {r['index']:r for r in comparison.get('competitors', [])}
+        alternatives = {r['index']:r for r in rival_comparison.get('competitors', [])}
         sources = {r['requested_url']:r for r in enrichment.get('sources', [])}
-        for i,candidate in enumerate((enrichment.get('plan') or {}).get('competitors', [])):
-            c = alternatives.get(i, {})
+        candidates = (enrichment.get('plan') or {}).get('competitors', [])
+        supported = sum(bool(alternatives.get(c.get("index", i), {}).get("source_quote")) for i,c in enumerate(candidates))
+        body += '<div class="method-summary"><span>'+str(len(candidates))+' suggested competitors</span><span>'+str(supported)+' comparisons with quoted evidence</span><span>Same visitor goal</span></div>'
+        for i,candidate in enumerate(candidates):
+            c = alternatives.get(candidate.get("index", i), {})
             source = sources.get(candidate['url'], {})
-            insight = c.get('insight') if c.get('source_quote') else 'Insufficient captured source evidence for a comparison; relevance remains a model suggestion.'
+            supported_row = bool(c.get("source_quote"))
+            status = "Evidence-backed comparison" if supported_row else "Source unavailable" if source.get("state") != "captured" else "Comparison unverified"
+            insight = c.get('insight') if supported_row else 'This source has not established a usable comparison for the stated goal.'
+            action = c.get("next_step") or ("Choose a change to test using the observed difference." if supported_row else "Confirm this candidate and inspect its source before using it to change the site.")
             support = '<blockquote class="quote">'+esc(c.get('source_quote',''))+'</blockquote>'+context_citations(c.get('site_evidence', []))
             if source:
-                support += '<a href="#context-source-'+str(source['index'])+'">Inspect alternative source</a>'
-            site_position=c.get('site_position') if c.get('site_evidence') else 'Not compared'
-            alternative_position=c.get('alternative_position') if c.get('source_quote') else 'Source evidence unavailable'
-            rows += '<article class="rival-card"><span class="badge">'+esc(candidate['relationship'].replace('_',' '))+'</span><h3>'+esc(candidate['name'])+'</h3><div class="rival-comparison"><div><span class="label">'+esc(host)+'</span><p>'+esc(site_position or 'See retained site evidence')+'</p></div><div><span class="label">'+esc(candidate['name'])+'</span><p>'+esc(alternative_position or 'See retained source')+'</p></div></div><p class="difference">'+esc(insight)+'</p><details><summary>Why this alternative &amp; evidence</summary><p>'+esc(candidate['reason'])+'</p>'+support+'</details></article>'
+                support += '<a href="#context-source-'+str(source['index'])+'">Inspect competitor source</a>'
+            site_position=c.get('site_position') if c.get('site_evidence') else 'Website contrast not established'
+            alternative_position=c.get('alternative_position') if supported_row else 'Competitor contrast not established'
+            rows += ('<article class="rival-card"><span class="badge">'+status+'</span><h3>'+
+                '<a href="'+esc(candidate['url'])+'" target="_blank" rel="noopener noreferrer">'+esc(candidate['name'])+'</a></h3>'+
+                '<p class="rival-relevance">'+esc(candidate['reason'])+'</p>'+
+                '<div class="rival-comparison"><div><span class="label">'+esc(host)+'</span><p>'+esc(site_position)+'</p></div>'+
+                '<div><span class="label">'+esc(candidate['name'])+'</span><p>'+esc(alternative_position)+'</p></div></div>'+
+                '<p class="difference"><strong>Why it matters.</strong> '+esc(insight)+'</p>'+
+                '<div class="next-action"><span class="label">What to test</span><p>'+esc(action)+'</p></div>'+
+                '<details><summary>Compare the exact evidence</summary>'+support+'</details></article>')
         body += '<div class="rival-grid">'+rows+'</div>'
-        count = len((enrichment.get('plan') or {}).get('competitors', []))
-        if count < 3:
-            body += '<p class="caveat">'+str(count)+' of up to three candidates suggested; missing candidates are not invented.</p>'
-        body += '<p class="caveat">'+esc(comparison.get('selection_caveat','Suggested alternatives require your confirmation.'))+'</p><p class="muted">Not your competitors? Give Hermes the intended audience, region or alternatives in a new goal-focused run. Disagreement alone does not establish a positioning problem.</p>'
+        if len(candidates) < 3:
+            body += '<p class="caveat">The retained evidence supplies '+str(len(candidates))+' of up to three candidates.</p>'
+        if competitor_review.get("issues"):
+            body += '<p class="caveat">Some proposed comparisons lacked usable source evidence. The supported comparisons remain visible.</p>'
+        body += ('<details><summary>Selection &amp; limitations</summary><p>'+esc(rival_comparison.get('selection_caveat','Suggested alternatives require your confirmation.'))+'</p>'+
+                 '<p>These are suggestions, not a confirmed competitor set or ranking. Tell Hermes which to keep or replace. It can remember your corrections for future reviews.</p></details>')
+        body += '<details class="source-directory"><summary>Sources for AI answers &amp; competitors</summary>'
         for source in enrichment.get('sources', []):
             source_link = esc(source['requested_url'])
             if source['state']=='captured':
@@ -715,7 +738,8 @@ def render(record, baseline=None):
         body += '<p class="caveat">Source retrieval alone does not establish claim support. Checks use only the retained text, which may be truncated or unavailable. Current policy, availability and competitor relevance may still require confirmation.</p>'
         if enrichment.get('issues'):
             body += '<details><summary>Incomplete context</summary><ul>'+''.join('<li>'+esc(i)+'</li>' for i in enrichment['issues'])+'</ul></details>'
-        sheet("alternatives", "Competitors & alternatives", body)
+        body += '</details>'
+        sheet("alternatives", "Competitors", body, "competitor-sheet")
 
     if record.get("answer_history"):
         current_rows = ((enrichment or {}).get("comparison") or {}).get("answers", [])
@@ -849,7 +873,7 @@ def render(record, baseline=None):
     if not show_evident_cta:
         nav = nav.replace('<a href="#deeper">Go deeper</a>', '')
     if enrichment:
-        nav = nav.replace('<a href="#coverage">Method</a>', '<a href="#ai-context">AI answers</a><a href="#alternatives">Alternatives</a><a href="#coverage">Method</a>')
+        nav = nav.replace('<a href="#coverage">Method</a>', '<a href="#ai-context">AI answers</a><a href="#alternatives">Competitors</a><a href="#coverage">Method</a>')
     if not journeys:
         nav = nav.replace('<a href="#journeys">Journeys</a>', '')
     if record.get('retest'):
