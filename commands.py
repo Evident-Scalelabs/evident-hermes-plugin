@@ -63,8 +63,9 @@ def register_commands(ctx, make_store, scope):
             subparser.add_argument("--json", action="store_true", help="Machine-readable output instead of the concise summary")
         repeat = actions.add_parser("verify", help="Repeat the saved assertions")
         repeat.add_argument("run_id")
+        repeat.add_argument("--saved", action="store_true", help="Interpret the identifier as a saved business-claim test")
         repeat.add_argument("--change", required=True)
-        view = actions.add_parser("view", help="Export retained screenshots and evidence as inert HTML")
+        view = actions.add_parser("view", help="Export retained screenshots and evidence as offline HTML")
         view.add_argument("run_id")
         explanation = actions.add_parser("explain", help="Send bounded retained text to the configured host model with explicit consent")
         explanation.add_argument("run_id")
@@ -92,7 +93,7 @@ def register_commands(ctx, make_store, scope):
         if args.action == "explain":
             return json.loads(await asyncio.to_thread(ctx.dispatch_tool, "evident_explain", {"run_id": args.run_id, "consent": args.consent}))
         if args.action == "verify":
-            result = json.loads(await asyncio.to_thread(ctx.dispatch_tool, "evident_verify", {"run_id": args.run_id, "change_context": args.change}))
+            result = json.loads(await asyncio.to_thread(ctx.dispatch_tool, "evident_verify", {"test_id" if args.saved else "run_id": args.run_id, "change_context": args.change}))
             return {"result": result, "view": export(result["run_id"])} if "run_id" in result else result
         if args.action == "demo":
             from .demo import run_demo
@@ -102,7 +103,7 @@ def register_commands(ctx, make_store, scope):
         browser_server_url = ctx.get_config("browser_server_url", default="")
         if args.action == "scan":
             from .interpretation import scan_report
-            return await scan_report(ctx, make_store(), args.url, args.objective if args.objective is not None else DEFAULT_OBJECTIVE, max_pages=args.max_pages, seconds=args.seconds, context=args.context)
+            return await scan_report(ctx, make_store(), args.url, DEFAULT_OBJECTIVE if args.general else args.objective, max_pages=args.max_pages, seconds=args.seconds, context=args.context)
         if args.action == "observe":
             origins, fixture = scope()
             result = await observe_browser(make_store(), browser_plan(args.url, args.contains), origins, fixture, browser_server_url=browser_server_url)
@@ -112,7 +113,7 @@ def register_commands(ctx, make_store, scope):
             result = asyncio.run(run(args))
             print(json.dumps(result, indent=2) if args.json else chat_summary(result))
             final_state = result.get("after", result.get("result", result)).get("state", "complete")
-            if final_state != "complete":
+            if final_state not in ("complete", "passed"):
                 raise SystemExit(1)
         except Exception as exc:
             print(json.dumps({"state": "unavailable", "error": str(exc)}) if args.json else "Could not complete the request: " + str(exc))

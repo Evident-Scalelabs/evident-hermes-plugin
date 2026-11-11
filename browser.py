@@ -12,7 +12,7 @@ from urllib.parse import urljoin, urlsplit, urldefrag
 from .evidence import now
 from .transport import PolicyStop, authorize, fetch, target
 
-METHOD = "rendered-navigation.v24"
+METHOD = "rendered-navigation.v25"
 CLEANUP_TIMEOUT = 10
 # Empty placeholders remain evidence; populated controls are omitted from text and images.
 PRIVATE_CONTROLS = "input:not(:placeholder-shown), textarea:not(:placeholder-shown), select, [contenteditable]:not([contenteditable=false])"
@@ -96,11 +96,25 @@ CONTROL_ID = ('kind','selector','text','group')
 
 EVIDENCE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li,tr,td,th,dt,dd,a,button,summary,[role=tab],label,input:not([type=password]),textarea"
 ELEMENT_SCAN = """(els,region) => els.filter(el => el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})).map(el => {
+                                    const parts=[];
+                                    for(let node=el;node && node.nodeType===1;node=node.parentElement){
+                                        if(node.id && document.querySelectorAll('#'+CSS.escape(node.id)).length===1){parts.unshift('#'+CSS.escape(node.id));break;}
+                                        const peers=node.parentElement ? [...node.parentElement.children].filter(x=>x.tagName===node.tagName) : [node];
+                                        parts.unshift(node.tagName.toLowerCase()+':nth-of-type('+(peers.indexOf(node)+1)+')');
+                                    }
+                                    const heading = root => [...root.querySelectorAll('h1,h2,h3,h4,h5,h6')].find(h=>h!==el && !el.contains(h))?.innerText.trim().slice(0,240) || '';
+                                    let regionHeading='';
+                                    for(let parent=el.parentElement;parent && !regionHeading;parent=parent.parentElement)regionHeading=heading(parent);
+                                    const identity={selector:parts.join(' > '),tag:el.tagName,
+                                        page_heading:document.querySelector('h1')?.innerText.trim().slice(0,240) || '',
+                                        region_heading:regionHeading,
+                                        siblings:el.parentElement ? [...el.parentElement.children].map(n=>n.tagName).join(',').slice(0,1200) : ''};
                                     const r = el.getBoundingClientRect();
                                     const control = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
                                     // Inspect only a displayed placeholder, never a populated field value.
                                     const text = control ? (el.value ? '' : (el.getAttribute('placeholder') || '')) : el.innerText;
-                                    return {text: text.slice(0, 1200), text_origin: control ? 'visible_placeholder' : 'rendered_text', tag: el.tagName,
+                                    return {text: text.slice(0, 1200), text_truncated:text.length>1200, identity,
+                                        text_origin: control ? 'visible_placeholder' : 'rendered_text', tag: el.tagName,
                                         href: el.tagName === 'A' ? el.getAttribute('href') : null,
                                         x: Math.max(0,r.x+scrollX), y: Math.max(0,r.y+scrollY),
                                         width: Math.max(0,Math.min(innerWidth,r.right)-Math.max(0,r.x)),
@@ -509,6 +523,11 @@ async def observe_browser(store, plan, origins, fixture_origin="", baseline=None
                                     fetched_url=page.url, source_text=text[:65536], text_truncated=len(text)>65536,
                                     locator=f"{run_id}/step-{index}.json#source_text")
                                 observed["page_title"] = (await page.title())[:300]
+                                observed["document_observations"] = await page.evaluate("""() => ({
+                                    canonical:[...document.querySelectorAll('link[rel~=canonical]')].slice(0,10).map(e=>({declared:e.getAttribute('href')?.slice(0,2048) || '',resolved:e.href.slice(0,2048)})),
+                                    robots:[...document.querySelectorAll('meta[name]')].filter(e=>['robots','googlebot','bingbot'].includes(e.name.toLowerCase())).slice(0,10).map(e=>({agent:e.name,content:e.content.slice(0,1200)})),
+                                    scope:'Rendered declarations on this visited page. Actual indexing, robots.txt and response-header directives were not measured.'
+                                })""")
                                 observed["declarations_text"] = await page.evaluate(r"""() => {
                                     const out = ['Document title: '+document.title];
                                     const clip = x => String(x || '').slice(0,1200);

@@ -3,6 +3,7 @@ from pathlib import Path
 """Optional host-mediated explanation of retained observations; no evaluation rubric."""
 from dataclasses import asdict
 import json
+import sqlite3
 
 from .evidence import now, screenshot_data
 from .checks import CHECK_VERSION, review_questions
@@ -128,7 +129,7 @@ async def review_capture(ctx, store, run_id, receipt):
     return response.parsed
 
 
-async def scan_report(ctx, store, url, objective=DEFAULT_OBJECTIVE, *, max_pages=None, seconds=None, context=True):
+async def scan_report(ctx, store, url, objective=None, *, max_pages=None, seconds=None, context=True):
     """One explicit user request → bounded capture → host vision → one report."""
     import asyncio
     from .browser import observe_browser
@@ -139,6 +140,14 @@ async def scan_report(ctx, store, url, objective=DEFAULT_OBJECTIVE, *, max_pages
         raise ValueError("Enable browser_enabled in plugin settings for website reports")
     if ctx.get_config("allow_model_interpretation", default=False) is not True:
         raise ValueError("Website reports send captured public text and screenshots to your configured Hermes model and may incur cost. Enable allow_model_interpretation once in plugin settings; capture-only observe remains available.")
+    with store.history() as history:
+        remembered = history.recall(url)
+        saved_goal = next((i["value"] for i in remembered["items"] if i["kind"] == "goal"), None)
+        previous = history.previous(url)
+    explicit_objective = objective is not None
+    if objective is None:
+        goals = [i["value"] for i in remembered["items"] if i["kind"] == "goal" and i["source_available"]]
+        objective = goals[-1] if goals else DEFAULT_OBJECTIVE
     if not isinstance(objective, str) or not 1 <= len(objective.strip()) <= 500:
         raise ValueError("Provide a goal of 1–500 characters")
     if type(context) is not bool:
@@ -151,21 +160,32 @@ async def scan_report(ctx, store, url, objective=DEFAULT_OBJECTIVE, *, max_pages
     configured = ctx.get_config("authorized_origins", default=[])
     if not isinstance(configured, list) or len(configured)>10 or any(not isinstance(v,str) for v in configured):
         raise ValueError("Invalid authorized origins")
+    if explicit_objective and objective != saved_goal:
+        with store.history() as history:
+            history.remember(url, "goal", "goal", objective)
+            remembered = history.recall(url)
     origins = list(dict.fromkeys([origin,*configured]))
     plan = browser_plan(resolved, "")
     plan["objective"] = objective
     plan["limits"].update(seconds=seconds,resources=400)
     plan["steps"] = [{"action":"open","url":resolved,"assertions":[],"purpose":"Understand the starting page and discover relevant visitor paths","expected":"Inspect the actual offer, links and evidence available to a visitor"}]
     planner = JourneyPlanner(ctx,store,objective,max_pages)
+    planner.site_context = {"items": [item for item in remembered["items"] if item["source_available"]],
+                            "prior_runs": [run for run in remembered["runs"] if run["source_available"]],
+                            "authority": "User-stated context and dated history. Reassess against fresh evidence; these are not current website observations."}
     result = await observe_browser(store,plan,origins,browser_server_url=ctx.get_config("browser_server_url",default=""), next_steps=planner, read_data=True, native_browser=ctx.get_config("reuse_hermes_browser",default=True), hosted_browser=ctx.get_config("allow_hosted_browser",default=False))
     run_id = result["run_id"]
+    history_issue = None
+    store.write(run_id, "site-context.json", {**remembered, "objective": objective,
+                "objective_reused": not explicit_objective and any(i["kind"] == "goal" and i["source_available"] and i["value"] == objective for i in remembered["items"]),
+                "previous_run": previous["run_id"] if previous else None})
     receipt = {"method": "url-to-journey-report.v6", "show_evident_cta":ctx.get_config("show_evident_cta",default=True) is True, "review_mode": "general" if objective == DEFAULT_OBJECTIVE else "goal_focused", "check_version": CHECK_VERSION, "requested_url": url, "capture_url": resolved, "redirects": redirects,
                "consent": "Explicit website report request with operator model opt-in",
                "coverage": "Selected pages and visitor paths from observed links, headings and supported local controls; unvisited routes, account actions, external boundaries and real visitor outcomes remain outside coverage",
                "budgets":{"pages":max_pages,"capture_and_planning_seconds":seconds,"planning_calls":PLANNING_CALLS,"steps":24},
                "exploration":planner.receipts,"stop_reason":planner.stop,
                "model_input": "Bounded retained text, measured element geometry, actual navigation trace and retained images across the selected pages",
-               "state": "pending"}
+               "site_context": planner.site_context, "state": "pending"}
     try:
         if result["state"] == "cancelled":
             raise asyncio.CancelledError
@@ -185,7 +205,7 @@ async def scan_report(ctx, store, url, objective=DEFAULT_OBJECTIVE, *, max_pages
         from .contextual import collect
         try:
             with store.lease():
-                enrichment = await collect(ctx, store, run_id)
+                enrichment = await collect(ctx, store, run_id, previous=previous, memory=remembered)
             receipt["context_state"] = enrichment["state"]
             if enrichment["state"] != "complete":
                 receipt["state"] = "partial"
@@ -194,6 +214,15 @@ async def scan_report(ctx, store, url, objective=DEFAULT_OBJECTIVE, *, max_pages
             receipt["context_state"] = "cancelled"
             store.write(run_id, "scan.json", receipt)
             raise
+    try:
+        with store.history() as history:
+            saved = history.record_run(url, {**store.inspect(run_id), "scan": receipt}, remembered["comparison_revision"])
+        receipt["history_state"] = "saved" if saved else "context_changed_during_review"
+    except sqlite3.Error as exc:
+        history_issue = type(exc).__name__
+    if history_issue:
+        receipt.update(history_state="unavailable", history_error=history_issue)
+        summary += " Site history could not be updated; the report is retained."
     store.write(run_id, "scan.json", receipt)
     # Export only one deliverable; partial work is explicitly labelled, not substituted silently.
     path = path or export_report(store, run_id)

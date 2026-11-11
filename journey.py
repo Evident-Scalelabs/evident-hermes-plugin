@@ -52,7 +52,7 @@ class JourneyPlanner:
         visible_states={control_key(s,c) for s in steps if s.get("state")=="observed" for c in s.get("controls",[]) if c["active"]}
         candidates = [{"index":i,**c} for i,c in enumerate(current.get("controls",[]))
                       if control_key(current,c) not in visible_states and control_key(current,c) not in self.control_reviews]
-        payload = {"control_candidates":candidates,"control_source_step":current["index"],
+        payload = {"site_context": getattr(self, "site_context", {}), "control_candidates":candidates,"control_source_step":current["index"],
             "control_investigations":self.coverage(steps),"objective":self.objective, "review_checks":review_questions(), "pages_remaining":max(0,self.max_pages-len(pages)),
             "steps_remaining":24-len(steps), "seconds_remaining":round(seconds_left),
             "pages":[{"step":s["index"],"url":s["fetched_url"],"text":s.get("source_text","")[:10000],

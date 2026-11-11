@@ -7,19 +7,33 @@ import re
 import uuid
 
 ID = re.compile(r"[0-9a-f]{32}\Z")
-FILES = re.compile(r"(?:(?:context|context-plan|context-comparison|context-claims(?:-followup)?|context-followups|context-answer-[0-3](?:-retry-1)?|context-source-(?:[0-9]|1[0-6])|plan|execution-plan|planning-[0-9]|control-followup-(?:[0-9]|1[0-9]|2[0-3])|result|explanation|review|scan|demo|model-output|step-(?:[0-9]|1[0-9]|2[0-3]))\.json|(?:view|report|reviewed-report)\.html)\Z")
+FILES = re.compile(r"(?:(?:site-context|answer-history|retest|context|context-plan|context-comparison|context-claims(?:-followup)?|context-followups|context-answer-[0-3](?:-retry-1)?|context-source-(?:[0-9]|1[0-6])|plan|execution-plan|planning-[0-9]|control-followup-(?:[0-9]|1[0-9]|2[0-3])|result|explanation|review|scan|demo|model-output|step-(?:[0-9]|1[0-9]|2[0-3]))\.json|(?:view|report|reviewed-report)\.html)\Z")
 PENDING = re.compile(r"\.pending-[0-9a-f]{32}\Z")
 
 
 class Store:
-    def __init__(self, root):
+    def __init__(self, root, database_factory=None):
         self.root = Path(root)
+        self.database_factory = database_factory
         if not hasattr(os, "O_NOFOLLOW"):
             raise RuntimeError("This preview requires a POSIX host with O_NOFOLLOW")
         for part in (self.root, *self.root.parents):
             if part.is_symlink():
                 raise ValueError("Symlinked artifact storage is not supported")
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    @contextlib.contextmanager
+    def history(self):
+        import sqlite3
+        from .site_history import SiteHistory
+        database = self.root / "site-history.db"
+        if any((self.root / name).is_symlink() for name in ("site-history.db", "site-history.db-wal", "site-history.db-shm")):
+            raise ValueError("Symlinked history storage is not supported")
+        connection = self.database_factory() if self.database_factory else sqlite3.connect(database, timeout=5)
+        try:
+            yield SiteHistory(connection, self)
+        finally:
+            connection.close()
 
     @contextlib.contextmanager
     def directory(self, run_id=None):
@@ -111,6 +125,11 @@ class Store:
         except FileNotFoundError:
             result = {"state": "incomplete", "limitation": "No final receipt; retained steps are inspectable"}
         record = {"run_id": run_id, "plan": plan, "steps": steps, "result": result}
+        for key, filename in (("site_context", "site-context.json"), ("answer_history", "answer-history.json"), ("retest", "retest.json")):
+            try:
+                record[key] = self.read(run_id, filename)
+            except FileNotFoundError:
+                pass
         try:
             record["explanation"] = self.read(run_id, "explanation.json")
         except FileNotFoundError:

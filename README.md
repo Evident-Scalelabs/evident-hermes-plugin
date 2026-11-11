@@ -10,7 +10,7 @@ Start a Hermes chat with **“Is this evident?”**
 >
 > **Hermes** · Which website should I look at?
 
-Send the URL and Hermes follows the journey with that buyer and decision in mind. For a general perception scan, give the address and say “just take a look.” If you send the address first, Hermes asks about your focus. “Is my website evident?” opens the same conversation. The wording of Hermes’s replies can vary with its configured model.
+Send the URL and Hermes follows the journey with that buyer and decision in mind. A returning site uses its saved goal. A new URL starts a general perception scan when you leave the focus open. You can request a new goal or a fresh general review. “Is my website evident?” opens the same conversation. The wording of Hermes’s replies can vary with its configured model.
 
 You get **one offline HTML report** with highlighted screenshots, actionable findings and the limits of what Hermes could verify. By default the report also includes independent AI answers and suggested alternatives. You can ask for a website-only review.
 
@@ -29,6 +29,30 @@ A native Hermes plugin for rendered evidence, screenshots, bounded link navigati
 This candidate is awaiting release, license and naming review. No public license has been selected. There is no connected service, account requirement for deterministic capture, telemetry, editing tool or scheduled job. A conversational host-authored review uses the normal Hermes session. Optional separate model explanation uses the configured Hermes model only after opt-in and explicit consent.
 
 ## Compatibility and installation for private review
+
+Site history uses Hermes's native profile-scoped `plugins.plugin_storage.plugin_db()` and a local SQLite database beside the immutable evidence store. The host must provide that interface. The plugin records business context only through its explicit memory and investigation tools.
+
+## Site memory and repeatable corrections
+
+The `evident_memory` tool recalls the site's goal, audience, confirmed facts, competitor corrections, finding feedback, prior reviews and saved tests. Corrections use the same key and retain a revision. Facts supplied by the user carry that provenance. Observations and model interpretations retain their dated run references. An unavailable source is marked explicitly.
+
+Ask Hermes to remember or correct a fact, to show what it remembers, or to forget a selected item or the whole site. Forgetting removes the selected facts from retrieval. A retrieval boundary prevents older summaries from restoring forgotten statements. Historical reports and test records remain on disk. The `evident_delete` tool removes a specifically selected evidence run. Each Hermes profile has independent storage.
+
+For a saved correction, Hermes proposes the complete expected statement in each cited region. After the user confirms it, `evident_save_test` stores the finding, source selectors, page and section identities, displayed control states, expected text and baseline result. After an authorized edit, `evident_verify` accepts `test_id` and `change_context`. It replays the original journey and tests the same criteria. The report pairs highlighted before/after evidence.
+
+The first version compares exact rendered statements with whitespace normalized. Text in another region cannot satisfy a check. Additional contradictory wording fails the exact check. A missing page, ambiguous element, changed identity, truncated text, different control state or changed collection conditions yields an inconclusive result. Captures made before stable identity collection require a fresh baseline. Changed goals, audiences or confirmed business facts require new confirmation. Existing run-based verification remains available.
+
+```sh
+hermes evident verify TEST_ID --saved --change "The site owner corrected the confirmed pricing statement"
+```
+
+Comparable repeat reviews reuse their four saved buyer questions. The report compares individual answers, source-support counts, citations and suggested competitors. It records the actual model route and requested sampling settings. Changed conditions are labelled incomparable. Competitor include/exclude corrections guide future suggestions. Individual samples can vary even with identical settings.
+
+Reports include a previous/next screenshot replay using retained images, measured highlights and the actual sequence of pages and controls. A fixed, hash-authorized offline script drives the viewer. Three leading actions stay prominent and further findings are expandable. Canonical and robots declarations are recorded on visited pages with their measurement limits.
+
+General conversation memory, embeddings, multi-model campaigns, scheduling, Search Console, ranking/backlink data and mobile/keyboard investigations are planned extensions. This candidate uses site-specific history and the host's configured model.
+
+## Host compatibility
 
 Python 3.11+ on a POSIX host with `O_NOFOLLOW` and `fcntl`. Tested on macOS with Python 3.14.9 against unmodified public [Hermes source](https://github.com/NousResearch/hermes-agent/tree/a5f20c5c04d52dd92a55c01e58dcc004896b52c2). The plugin uses documented native `register_tool`, `register_skill`, `get_config` and `plugins.plugin_storage.plugin_data_dir`. Hermes does not supply a global plugin API version; no guessed minimum Hermes version is declared. A missing storage interface or unsupported Python fails registration. Windows is unsupported by this preview; The preceding private version was also tested in a Linux Hermes v0.21.5 installation with an isolated browser worker; verify each new candidate on its serving host.
 

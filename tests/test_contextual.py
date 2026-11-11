@@ -7,16 +7,18 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from test_evidence import Store, plan
+from test_evidence import Store, plan, assert_safe_report_scripts
 from test_browser_contract import Usage
 from evidence_candidate.contextual import collect, source, ROLES, bind_claim_checks, LinkedSourceText, apply_claim_recheck
 from evidence_candidate.report import render
 
 
 class ContextTests(unittest.IsolatedAsyncioTestCase):
-    async def exercise(self, *, route_change=False, invalid=False, failed=False, malformed=False, persist_malformed=False, failed_check=False, followups=False, bad_followup=False, unobserved_link=False, followup_quote=None):
+    async def exercise(self, *, route_change=False, invalid=False, failed=False, malformed=False, persist_malformed=False, failed_check=False, followups=False, bad_followup=False, unobserved_link=False, followup_quote=None, previous=None, memory=None, invalid_candidate=False):
         seen=[]
         value={'category':'Public visits','scope':'Fixture area','questions':[{'role':r,'question':'Question '+str(i)} for i,r in enumerate(ROLES)],'competitors':[{'name':'Alternative <script>','url':'https://alternative.example/','relationship':'adjacent_alternative','reason':'Similar visitor task'}]}
+        if invalid_candidate:
+            value['competitors'].append({**value['competitors'][0], 'url': 'javascript:invalid'})
         comparison={'summary':'Fixture comparison','selection_caveat':'Confirm relevance; rejection is not proof of positioning failure.',
             'answers':[{'index':i,'status':'tension','answer_position':'Open daily','site_position':'Weekdays only','insight':'Compare terms','next_step':'Confirm conditions','answer_quote':'Open daily','site_evidence':[{'step':0,'quote':'Invented' if invalid else 'Open weekdays'}]} for i in range(4)],
             'competitors':[{'index':0,'site_position':'Weekdays only','alternative_position':'Open daily','insight':'Different hours for the same task','source_quote':'Open daily','site_evidence':[{'step':0,'quote':'Open weekdays'}]}]}
@@ -58,7 +60,7 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
             store=Store(Path(tmp).resolve());run=store.create(plan('https://website.example/'))
             store.write(run,'step-0.json',{'index':0,'state':'observed','source_text':'Open weekdays','fetched_url':'https://website.example/','assertions':[]})
             store.write(run,'result.json',{'state':'complete','limitations':[]})
-            with patch('evidence_candidate.contextual.source',get):result=await collect(SimpleNamespace(llm=Model()),store,run)
+            with patch('evidence_candidate.contextual.source',get):result=await collect(SimpleNamespace(llm=Model()),store,run,previous=previous,memory=memory)
             retained=store.inspect(run)
             raw=[p.name for p in (store.root/run).glob('context*.json')]
             html=render(retained)
@@ -85,8 +87,29 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('website',check_payload)
         self.assertEqual(set(check_payload['answers'][0]),{'index','answer','sources'})
         self.assertIn('id="ai-context"',html);self.assertIn('href="#ai-context"',html)
-        self.assertNotIn('<script>',html);self.assertIn('Alternative &lt;script&gt;',html)
+        assert_safe_report_scripts(self, html)
+        self.assertIn('Alternative &lt;script&gt;',html)
         self.assertIn('not a confirmed competitor set',html)
+
+    async def test_questions_are_reused_and_competitor_corrections_apply(self):
+        previous, _, _, _ = await self.exercise()
+        for question in previous['plan']['questions']:
+            question['question'] = 'Frozen ' + question['question']
+        memory = {'revision': 0, 'items': [
+            {'kind': 'competitor', 'source_available': True, 'value': {'name': 'Rejected', 'url': 'https://alternative.example/', 'disposition': 'exclude', 'reason': 'Wrong market'}},
+            {'kind': 'competitor', 'source_available': True, 'value': {'name': 'Chosen', 'url': 'https://chosen.example/', 'disposition': 'include', 'reason': 'User confirmed the same market'}}]}
+        result, calls, _, document = await self.exercise(previous={'run_id': 'a'*32, 'context': previous}, memory=memory)
+        self.assertEqual(result['plan']['questions'], previous['plan']['questions'])
+        self.assertEqual(result['plan']['competitors'][0]['name'], 'Chosen')
+        self.assertEqual(result['questions_reused_from'], 'a'*32)
+        self.assertTrue(all(json.loads(call['input'][0]['text'])['question'].startswith('Frozen ') for call in calls[1:5]))
+        self.assertTrue('Answer and support unchanged' in document)
+
+    async def test_invalid_alternative_keeps_answers_and_usable_sources(self):
+        result, _, _, _ = await self.exercise(invalid_candidate=True)
+        self.assertEqual(len(result['answers']), 4)
+        self.assertEqual(len(result['plan']['competitors']), 1)
+        self.assertEqual(result['state'], 'partial')
 
     async def test_route_change_and_failed_answer_remain_visible(self):
         result,_,raw,html=await self.exercise(route_change=True,failed=True)
