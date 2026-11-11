@@ -60,12 +60,28 @@ class SiteHistory:
         except (OSError, ValueError):
             return False
 
+    def comparison_revision(self, url):
+        """Revision of the goal, audience and facts that answer comparisons depend on. No artifact reads."""
+        site, _ = site_identity(url)
+        return self.db.execute("""SELECT MAX(
+            COALESCE((SELECT MAX(revision) FROM evident_memory WHERE site=:site AND kind IN ('goal', 'audience', 'fact')), 0),
+            COALESCE((SELECT revision FROM evident_recall_boundary WHERE site=:site), 0))""", {"site": site}).fetchone()[0]
+
+    def facts_digest(self, url):
+        """Fingerprint of the confirmed facts a saved test was written against.
+
+        Goals, audiences and competitor preferences never change an exact-text check."""
+        site, _ = site_identity(url)
+        rows = self.db.execute("""SELECT key, value FROM evident_memory m WHERE site=? AND kind='fact'
+            AND revision=(SELECT MAX(revision) FROM evident_memory r WHERE r.site=m.site AND r.key=m.key)
+            ORDER BY key""", (site,)).fetchall()
+        return hashlib.sha256(json.dumps([tuple(row) for row in rows]).encode()).hexdigest()
+
     def recall(self, url):
         site, origin = site_identity(url)
         row = self.db.execute("SELECT revision FROM evident_sites WHERE site=?", (site,)).fetchone()
         boundary = self.db.execute("SELECT revision, hidden_all_revision FROM evident_recall_boundary WHERE site=?", (site,)).fetchone()
-        comparison_revision = self.db.execute("SELECT COALESCE(MAX(revision), 0) FROM evident_memory WHERE site=? AND kind IN ('goal', 'audience', 'fact')", (site,)).fetchone()[0]
-        comparison_revision = max(comparison_revision, boundary["revision"] if boundary else 0)
+        comparison_revision = self.comparison_revision(url)
         items = []
         for entry in self.db.execute("""
             SELECT m.* FROM evident_memory m
@@ -99,12 +115,12 @@ class SiteHistory:
     def remember(self, url, key, kind, value, *, source_run=None):
         if kind not in ("goal", "audience", "fact", "competitor", "finding_disposition"):
             raise ValueError("Unknown memory kind")
+        if kind in ("goal", "audience"):
+            key = kind  # One goal and one audience per site; the caller need not name them.
         if not isinstance(key, str) or not 1 <= len(key.strip()) <= 120:
             raise ValueError("Memory key requires 1–120 characters")
         key = key.strip()
-        if kind in ("goal", "audience"):
-            key = kind
-        elif key in ("goal", "audience"):
+        if key in ("goal", "audience") and key != kind:
             raise ValueError("Goal and audience keys require their matching memory kind")
         if kind == "competitor":
             if not isinstance(value, dict) or set(value) != {"name", "url", "disposition", "reason"}:
@@ -173,7 +189,7 @@ class SiteHistory:
             state = retest["after"]["status"]
         with self.db:
             site, _ = self._site(url)
-            if self.recall(url)["comparison_revision"] != revision:
+            if self.comparison_revision(url) != revision:
                 return False
             self.db.execute("INSERT OR IGNORE INTO evident_history VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (record["run_id"], site, record["plan"]["objective"], revision,

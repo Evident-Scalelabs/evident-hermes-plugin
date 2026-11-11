@@ -335,6 +335,8 @@ REPLAY_SCRIPT = """(() => {
     for (let parent = target.parentElement; parent; parent = parent.parentElement) {
       if (parent.tagName === 'DETAILS') parent.open = true;
     }
+    const folded = target.querySelector('details[data-finding]');
+    if (folded) folded.open = true;
     target.scrollIntoView({block:'start'});
   };
   window.addEventListener('hashchange', reveal);
@@ -606,7 +608,7 @@ def render(record, baseline=None):
         else:
             body += f'<p class="source"><a href="#step-{step["index"]}">See the shared source capture · evidence {step["index"]+1:02}</a></p>'
         if number > 3:
-            body = '<details><summary>'+esc(note['title'])+'</summary>'+body+'</details>'
+            body = '<details data-finding><summary>'+esc(note['title'])+'</summary>'+body+'</details>'
         sheet(f"note-{number}", f"Finding {number:02}", body)
 
     enrichment = record.get("context")

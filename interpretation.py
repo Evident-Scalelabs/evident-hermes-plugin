@@ -50,6 +50,7 @@ def explain(ctx, store, run_id, consent):
 
 
 DEFAULT_OBJECTIVE = "Review what the website communicates, what supports its claims, and how a visitor reaches the next step. Identify evidence-backed potential perception gaps and practical changes to test."
+NO_MEMORY = {"items": [], "runs": [], "tests": [], "revision": 0, "comparison_revision": 0}
 
 
 async def resolve_scan_url(url):
@@ -139,9 +140,12 @@ async def scan_report(ctx, store, url, objective=None, *, max_pages=None, second
         raise ValueError("Enable browser_enabled in plugin settings for website reports")
     if ctx.get_config("allow_model_interpretation", default=False) is not True:
         raise ValueError("Website reports send captured public text and screenshots to your configured Hermes model and may incur cost. Enable allow_model_interpretation once in plugin settings; capture-only observe remains available.")
-    with store.history() as history:
-        remembered = history.recall(url)
-        saved_goal = next((i["value"] for i in remembered["items"] if i["kind"] == "goal"), None)
+    try:
+        with store.history() as history:
+            remembered = history.recall(url)
+    except sqlite3.Error:
+        remembered = NO_MEMORY  # Site memory is optional context; the review itself continues.
+    saved_goal = next((i["value"] for i in remembered["items"] if i["kind"] == "goal"), None)
     explicit_objective = objective is not None
     if objective is None:
         goals = [i["value"] for i in remembered["items"] if i["kind"] == "goal" and i["source_available"]]
@@ -180,11 +184,14 @@ async def scan_report(ctx, store, url, objective=None, *, max_pages=None, second
             async with asyncio.timeout_at(deadline):
                 resolved, origin, redirects = await resolve_scan_url(url)
                 receipt.update(capture_url=resolved, redirects=redirects)
-                with store.history() as history:
-                    if explicit_objective and objective != saved_goal:
-                        history.remember(url, "goal", "goal", objective)
-                    remembered = history.recall(url)
-                    previous = history.previous(url)
+                try:
+                    with store.history() as history:
+                        if explicit_objective and objective != saved_goal:
+                            history.remember(url, "goal", "goal", objective)
+                        remembered = history.recall(url)
+                        previous = history.previous(url)
+                except sqlite3.Error:
+                    remembered, previous = NO_MEMORY, None
                 store.write(run_id, "site-context.json", {**remembered, "objective": objective,
                     "objective_reused": not explicit_objective and any(i["kind"] == "goal" and i["source_available"] and i["value"] == objective for i in remembered["items"]),
                     "previous_run": previous["run_id"] if previous else None})
