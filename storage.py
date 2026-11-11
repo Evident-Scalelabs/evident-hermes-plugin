@@ -11,7 +11,7 @@ import uuid
 ID = re.compile(r"[0-9a-f]{32}\Z")
 FILES = re.compile(r"(?:(?:site-context|answer-history|retest|context|context-plan|context-comparison|context-claims(?:-followup)?|context-followups|context-answer-[0-3](?:-retry-1)?|context-source-(?:[0-9]|1[0-6])|plan|execution-plan|planning-[0-9]|control-followup-(?:[0-9]|1[0-9]|2[0-3])|result|explanation|review|scan|demo|model-output|step-(?:[0-9]|1[0-9]|2[0-3]))\.json|(?:view|report|reviewed-report)\.html)\Z")
 PENDING = re.compile(r"\.pending-[0-9a-f]{32}\Z")
-SCAN_FILES = {"scan-request.json", "website-review.json", "context-started.json", "partial-report.html"}
+SCAN_FILES = {"scan-request.json", "website-review.json", "context-started.json", "partial-report.html", "reviewed-report-v2.html"}
 
 
 class CaptureBusy(ValueError):
@@ -141,7 +141,7 @@ class Store:
                     os.unlink(pending, dir_fd=directory)
 
     def published_report(self, run_id, name):
-        if name not in {"report.html", "reviewed-report.html", "partial-report.html"}:
+        if name not in {"report.html", "reviewed-report.html", "partial-report.html", "reviewed-report-v2.html"}:
             raise ValueError("Unknown report filename")
         with self.directory(run_id) as fd:
             info = os.stat(name, dir_fd=fd, follow_symlinks=False)

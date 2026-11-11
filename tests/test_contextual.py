@@ -103,7 +103,8 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['plan']['competitors'][0]['name'], 'Chosen')
         self.assertEqual(result['questions_reused_from'], 'a'*32)
         self.assertTrue(all(json.loads(call['input'][0]['text'])['question'].startswith('Frozen ') for call in calls[1:5]))
-        self.assertTrue('Answer and support unchanged' in document)
+        self.assertIn('Same answer and source checks', document)
+        self.assertIn('Cited pages backed 1 of 1 factual claims last time and 1 of 1 this time.', document)
 
     async def test_invalid_alternative_keeps_answers_and_usable_sources(self):
         result, _, _, _ = await self.exercise(invalid_candidate=True)

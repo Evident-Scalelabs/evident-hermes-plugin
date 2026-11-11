@@ -1,5 +1,5 @@
 name: evident-evidence
-version: 0.19.1
+version: 0.19.2
 description: "Is this evident? Explore how a website comes across to its visitors and buyers in one visual report."
 python_dependencies:
   - playwright==1.64.0

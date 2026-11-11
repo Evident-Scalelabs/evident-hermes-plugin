@@ -240,6 +240,8 @@ def export_report(store, run_id, *, record=None):
                   **record.get("scan", {}), "state": "partial",
                   "error": record.get("scan", {}).get("error", "No final scan receipt. Only retained evidence is shown.")}}
     name = "partial-report.html" if partial_snapshot else "reviewed-report.html" if record.get("review") else "report.html"
+    if not partial_snapshot and record.get("review") and (record.get("context") or record.get("answer_history")):
+        name = "reviewed-report-v2.html"  # Preserve previously delivered HTML while serving the clearer presentation.
     if not partial_snapshot:
         try:
             return store.published_report(run_id, name)
@@ -380,13 +382,51 @@ def journey_replay(steps, notes, viewport):
     return '<div class="replay" id="journey-replay"><div class="replay-top"><h3>Replay the investigation</h3><div class="replay-buttons" data-controls hidden><button type="button" data-previous>← Previous</button><span data-position aria-live="polite"></span><button type="button" data-next>Next →</button></div></div><div class="replay-strip">' + ''.join(buttons) + '</div>' + ''.join(frames) + '</div>'
 
 
-def answer_history(history):
-    body = '<p class="muted">Recorded answers from two reviews. Comparability requires the same goal, confirmed context, questions, model route and sampling settings.</p>'
+SOURCE_KEY = ("Supported means a cited passage backs the AI claim. Contradicted means a passage conflicts with it. "
+              "Unknown means the checked sources could not settle it. Advice is counted separately.")
+
+
+def source_action(counts):
+    if counts.get("contradicted"):
+        return "Check the conflicting passages before relying on this answer."
+    if counts.get("unknown"):
+        return "Verify the unresolved details before using this answer to advise a buyer."
+    if counts.get("supported"):
+        return "Use the cited passages when explaining these facts to a buyer."
+    return "Check a primary source before using this answer."
+
+
+def answer_history(history, comparisons=None):
+    body = '<p class="muted">This compares two AI answers to the same buyer question. A change here does not establish that the website changed. '+SOURCE_KEY+'</p>'
     for row in history["rows"]:
-        label = ("Answer or support changed" if row["changed"] else "Answer and support unchanged") if row["comparable"] else "Incomparable"
-        body += '<article class="history-row"><span class="badge">'+label+'</span><h3>'+esc(row["question"])+'</h3>'
-        if row["reason"]:
-            body += '<p class="caveat">'+esc(row["reason"])+'.</p>'
+        old, new = row["before"], row["after"]
+        comparison = (comparisons or {}).get(row["index"], {})
+        if not row["comparable"]:
+            label = "Different test conditions"
+            meaning = row["reason"].rstrip(".") + ". Read the current answer on its own."
+        else:
+            if not row["changed"]:
+                label = "Same answer and source checks"
+            elif old["answer"] != new["answer"]:
+                label = "AI answer wording changed"
+            elif old["citations"] != new["citations"]:
+                label = "Cited sources changed"
+            else:
+                label = "Source evidence changed"
+            before, after = old["factual_claims"], new["factual_claims"]
+            if sum(before.values()) and sum(after.values()):
+                meaning = (f'Cited pages backed {before["supported"]} of {sum(before.values())} factual claims last time '
+                           f'and {after["supported"]} of {sum(after.values())} this time.')
+            elif sum(after.values()):
+                meaning = f'The earlier sample had no factual verdicts. Cited pages back {after["supported"]} of {sum(after.values())} claims this time.'
+            else:
+                meaning = "The current sample has no factual verdicts to compare."
+            if after.get("contradicted"):
+                n = after["contradicted"]
+                meaning += f' {n} current claim{"s conflict" if n != 1 else " conflicts"} with the cited evidence.'
+            meaning += " " + (comparison.get("next_step") or source_action(after))
+        body += '<article class="history-row"><span class="badge">'+esc(label)+'</span><h3>'+esc(row["question"])+'</h3>'
+        body += '<p class="history-takeaway"><strong>What this means.</strong> '+esc(meaning)+'</p>'
         body += '<div class="history-pair">'
         for label, value in (("Previous", row["before"]), ("Current", row["after"])):
             body += '<div><span class="label">'+label+'</span>'
@@ -408,7 +448,7 @@ def answer_history(history):
     body += '<details><summary>Suggested alternatives across reviews</summary><div class="history-pair">'
     for label, key in (("Previous", "before"), ("Current", "after")):
         body += '<div><span class="label">'+label+'</span><ul>'+''.join('<li>'+esc(candidate["name"])+'</li>' for candidate in competitors.get(key, []))+'</ul></div>'
-    return body + '</div></details><p class="caveat">These are individual samples. A changed answer does not establish a market trend or a causal effect from website edits.</p>'
+    return body + '</div></details>'
 
 
 def saved_test_report(record, baseline):
@@ -613,7 +653,10 @@ def render(record, baseline=None):
             typed=checks.get('method')=='cited-source-support.v2'
             claims=[row for row in all_claims if row.get('kind')=='factual'] if typed else all_claims
             excluded=[row for row in all_claims if row.get('kind')!='factual'] if typed else []
-            support='<div class="claim-summary"><span class="label">Factual claims · source support</span><div class="claim-counts">'+''.join('<span class="badge '+status+'">'+str(sum(row['status']==status for row in claims))+' '+status+'</span>' for status in ('supported','contradicted','unknown'))+'</div></div>' if claims else '<p class="source">'+('No factual claims classified' if typed and all_claims else 'Claim support not assessed · unknown')+'</p>'
+            counts = {status: sum(row["status"] == status for row in claims) for status in ("supported", "contradicted", "unknown")}
+            support='<div class="claim-summary"><span class="label">Factual claims · source support</span><div class="claim-counts">'+''.join('<span class="badge '+status+'">'+str(counts[status])+' '+status+'</span>' for status in ('supported','contradicted','unknown'))+'</div></div>' if claims else '<p class="source">'+('No factual claims classified' if typed and all_claims else 'Claim support not assessed · unknown')+'</p>'
+            meaning = c.get("insight") or source_action(counts)
+            support = '<p class="answer-takeaway"><strong>What this means.</strong> '+esc(meaning)+'</p>' + support
             claim_detail=''
             for claim in claims:
                 evidence=''
@@ -628,9 +671,9 @@ def render(record, baseline=None):
                 labels={'advice':'Advice','uncertainty':'Author uncertainty','other':'Non-claim text','unclassified':'Unreviewed text · unknown'}
                 advice=sum(c.get('kind')=='advice' for c in excluded);unreviewed=sum(c.get('kind')=='unclassified' for c in excluded)
                 support+='<p class="source">'+str(advice)+' advice · '+str(len(excluded)-advice-unreviewed)+' uncertainty / other text'+(' · '+str(unreviewed)+' unreviewed spans (unknown)' if unreviewed else '')+' · outside factual verdict counts</p><details class="advice-details"><summary>Advice &amp; other answer text</summary><ul class="claim-list">'+''.join('<li class="nonclaim-row"><span class="badge">'+esc(labels.get(c.get('kind'),'Unclassified'))+'</span><p class="claim-text">'+esc(c['answer_quote'])+'</p><p class="muted">'+esc(c['reason'])+'</p></li>' for c in excluded)+'</ul></details>'
-            rows += '<article class="answer-card" id="answer-'+str(a['index'])+'"><span class="sample-label">'+str(a['index']+1).zfill(2)+' · '+cohort+'</span><h3>'+esc(a['question']['question'])+'</h3><span class="badge '+esc(c.get('status','unknown'))+'">Website alignment · '+esc(c.get('status','unknown'))+'</span>'+positions+'<div class="next-action"><span class="label">Next step</span><p>'+esc(c.get('next_step','Inspect retained evidence before acting.'))+'</p></div>'+support+'<details><summary>Full answer, interpretation &amp; source checks</summary><p>'+esc(c.get('insight','Comparison unavailable'))+'</p>'+details+'</details></article>'
+            rows += '<article class="answer-card" id="answer-'+str(a['index'])+'"><span class="sample-label">'+str(a['index']+1).zfill(2)+' · '+cohort+'</span><h3>'+esc(a['question']['question'])+'</h3><span class="badge '+esc(c.get('status','unknown'))+'">Website alignment · '+esc(c.get('status','unknown'))+'</span>'+positions+'<div class="next-action"><span class="label">Next step</span><p>'+esc(c.get('next_step','Inspect retained evidence before acting.'))+'</p></div>'+support+'<details><summary>Full answer &amp; source checks</summary>'+details+'</details></article>'
         body += '<div class="answer-grid">'+rows+'</div>'
-        body += '<p class="caveat">Supported: captured cited passages establish the claim. Contradicted: passages explicitly conflict. Unknown: factual evidence is insufficient. Advice, author uncertainty and other non-claims are shown separately; unreviewed text remains explicit. These are model judgments about source support, not independent verification of truth. Website alignment above is a separate comparison.</p>'
+        body += '<p class="caveat">'+SOURCE_KEY+'</p>'
         followups=enrichment.get('source_followups',[])
         if 'followup_state' in enrichment:
             body+='<p class="source">Source investigation: '+str(sum(r.get('state')=='captured' for r in followups))+' linked reads captured · '+str(sum(r.get('state')=='unavailable' for r in followups))+' unavailable · one bounded round</p>'
@@ -675,7 +718,9 @@ def render(record, baseline=None):
         sheet("alternatives", "Competitors & alternatives", body)
 
     if record.get("answer_history"):
-        sheet("answer-history", "Answer history", heading("Comparable reviews", "What changed <em>since the last review.</em>") + answer_history(record["answer_history"]))
+        current_rows = ((enrichment or {}).get("comparison") or {}).get("answers", [])
+        sheet("answer-history", "Answer history", heading("Previous and current answers", "How the AI answer <em>changed.</em>") +
+              answer_history(record["answer_history"], {row["index"]: row for row in current_rows}))
 
     if journeys:
         body = heading("The visitor paths", "Follow the decision.<br><em>See what was reached.</em>", "Recorded routes and what they established for the goal.")
