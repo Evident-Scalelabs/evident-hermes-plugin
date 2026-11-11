@@ -115,6 +115,9 @@ async def main():
                     result = await invoke("evident_verify", {"test_id": saved["test_id"], "change_context": "Fixture owner applied phase "+phase})
                     assert result["state"] == expected, (phase, result)
                     assert result["criteria_sha256"] == saved["definition"]["criteria_sha256"]
+                    history = await invoke("evident_memory", {"action": "recall", "url": origin})
+                    assert history["runs"][0]["run_id"] == result["run_id"]
+                    assert history["runs"][0]["state"] == expected
                     path = Path(result["report_path"])
                     shutil.copyfile(path, args.receipt_dir / (phase+".html"))
                     outcomes.append({"phase": phase, "state": result["state"], "criteria_sha256": result["criteria_sha256"],

@@ -36,9 +36,9 @@ Site history uses Hermes's native profile-scoped `plugins.plugin_storage.plugin_
 
 The `evident_memory` tool recalls the site's goal, audience, confirmed facts, competitor corrections, finding feedback, prior reviews and saved tests. Corrections use the same key and retain a revision. Facts supplied by the user carry that provenance. Observations and model interpretations retain their dated run references. An unavailable source is marked explicitly.
 
-Ask Hermes to remember or correct a fact, to show what it remembers, or to forget a selected item or the whole site. Forgetting removes the selected facts from retrieval. A retrieval boundary prevents older summaries from restoring forgotten statements. Historical reports and test records remain on disk. The `evident_delete` tool removes a specifically selected evidence run. Each Hermes profile has independent storage.
+Ask Hermes to remember or correct a fact, to show what it remembers, or to forget a selected item or the whole site. Forgetting removes the selected facts from retrieval. A retrieval boundary prevents older summaries from restoring forgotten statements. Historical reports and test records remain on disk. The `evident_delete` tool removes a specifically selected evidence run. Each Hermes profile has independent storage. Host conversation logs and host-created backups follow the host's retention settings.
 
-For a saved correction, Hermes proposes the complete expected statement in each cited region. After the user confirms it, `evident_save_test` stores the finding, source selectors, page and section identities, displayed control states, expected text and baseline result. After an authorized edit, `evident_verify` accepts `test_id` and `change_context`. It replays the original journey and tests the same criteria. The report pairs highlighted before/after evidence.
+For a saved correction, Hermes proposes the complete expected statement in each cited region. After the user confirms it, `evident_save_test` stores the finding, source selectors, page and section identities, displayed control states, expected text and baseline result. After an authorized edit, `evident_verify` accepts `test_id` and `change_context`. It replays the original journey and tests the same criteria. The report pairs highlighted before/after evidence. Site history retains the test's passed, failed or inconclusive outcome alongside its evidence run.
 
 The first version compares exact rendered statements with whitespace normalized. Text in another region cannot satisfy a check. Additional contradictory wording fails the exact check. A missing page, ambiguous element, changed identity, truncated text, different control state or changed collection conditions yields an inconclusive result. Captures made before stable identity collection require a fresh baseline. Changed goals, audiences or confirmed business facts require new confirmation. Existing run-based verification remains available.
 
@@ -54,7 +54,7 @@ General conversation memory, embeddings, multi-model campaigns, scheduling, Sear
 
 ## Host compatibility
 
-Python 3.11+ on a POSIX host with `O_NOFOLLOW` and `fcntl`. Tested on macOS with Python 3.14.9 against unmodified public [Hermes source](https://github.com/NousResearch/hermes-agent/tree/a5f20c5c04d52dd92a55c01e58dcc004896b52c2). The plugin uses documented native `register_tool`, `register_skill`, `get_config` and `plugins.plugin_storage.plugin_data_dir`. Hermes does not supply a global plugin API version; no guessed minimum Hermes version is declared. A missing storage interface or unsupported Python fails registration. Windows is unsupported by this preview; The preceding private version was also tested in a Linux Hermes v0.21.5 installation with an isolated browser worker; verify each new candidate on its serving host.
+Requires Python 3.11+ on a POSIX host with `O_NOFOLLOW` and `fcntl`, plus native `register_tool`, `register_skill`, `get_config`, `plugins.plugin_storage.plugin_data_dir` and `plugin_db`. Native loader and fixture tests ran on macOS with Python 3.14 against official Hermes v0.23.1 source, and on Linux with Python 3.13.5 and Hermes v0.21.5. The Linux host used the isolated loopback browser worker because its supervisor capture interface was unavailable. The manifest declares its concrete dependencies. Windows and vendor Desktop bundles require separate compatibility work. [Tested official Hermes source](https://github.com/NousResearch/hermes-agent/tree/3b421578588243f920886e6fe79a6faa87ea026e)
 
 For an existing supported Hermes installation, extract the private ZIP and copy only its `evident-evidence/` directory into the intended profile's `plugins/` directory. A disposable test profile is recommended for first use. Do not replace an existing plugin directory without reviewing its local changes. Run the [official checks](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission):
 
@@ -64,7 +64,7 @@ hermes plugins validate /absolute/path/to/evident-evidence --install-deps
 hermes plugins enable evident-evidence
 ```
 
-The plugin declares `playwright==1.64.0`; the official plugin installer/validator prepares it. Install its matching managed Chromium using `python -m playwright install chromium` in the same Hermes runtime. It never falls back to installed Chrome or a personal browser profile. This is a native plugin directory, not a pip package. The plugin is installed and exercised through the real upstream CLI, loader and dispatcher in an isolated source-based Hermes runtime. Real headless Chromium rendering/navigation and the native demo passed. A vendor Desktop bundle and interactive model-driven conversation have not been tested. Review the destination host's compatibility separately.
+The plugin declares `playwright==1.64.0`. The official plugin installer/validator prepares it. Install its matching managed Chromium using `python -m playwright install chromium` in the same Hermes runtime. Installation uses a native plugin directory. Configured-model URL reviews and memory conversations were exercised through the native Hermes CLI. Separate deterministic fixtures exercise real headless Chromium, native dispatch and verification without model interpretation. Use the retained receipts for the tested source revision and destination runtime.
 
 In that profile's settings, explicitly authorize anonymous read-only origins. Default settings deny all capture. Public mode permits HTTPS on port 443 only. `fixture_origin` is an optional single **isolated synthetic** server, using literal `127.0.0.1` or `::1` and an explicit non-default port; it is not permission to inspect unrelated local services. Example configuration:
 
@@ -198,7 +198,13 @@ For the rendered integration, install the pinned Playwright dependency and its m
 python tests/integration_browser.py /absolute/hermes-source --receipt-dir /absolute/private-rendered-receipts
 ```
 
-This exercises real Hermes tool dispatch, JavaScript rendering, CSS, hidden-text exclusion, anchor navigation, screenshots, identical-assertion repair/unchanged/regression, button refusal, same-origin redirect capture, cross-origin/loop refusal and request/credential restrictions. It uses synthetic local content and no model. This test passed on macOS arm64 with Chromium 156.0.8078.4 and the pinned Hermes source above. The private executed-test receipt also records the native CLI demo and a public HTTPS observation/replay. The preceding private candidate also passed on Linux with the loopback browser worker. Vendor Desktop execution remains untested; each release needs its own serving-host receipt.
+This fixture exercises real Hermes dispatch, JavaScript rendering, hidden-text exclusion, anchor navigation, screenshots, identical-assertion repair and regression, redirect boundaries, and request restrictions. It uses synthetic local content without model interpretation. Executed-test receipts identify the source revision and serving host for each run.
+
+Saved business-claim tests have a separate native fixture. It checks wrong-region text, a remaining contradiction, a correction, a missing page and ambiguous identity using the same criteria, then checks remembered outcomes and profile isolation.
+
+```sh
+python tests/integration_saved_retests.py /absolute/hermes-source --receipt-dir /absolute/private-retest-receipts
+```
 
 ## Journey integration check
 

@@ -73,6 +73,19 @@ class HistoryTests(unittest.TestCase):
             with store.history() as history, self.assertRaisesRegex(ValueError, "another site"):
                 history.remember("https://other.example/", "fact", "fact", "Unknown", source_run=run)
 
+    def test_recalled_retest_retains_its_outcome(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Store(Path(tmp).resolve())
+            run = fixture(store)
+            record = store.inspect(run)
+            record["retest"] = {"test_id": "a"*32, "definition": {"title": "Confirm the team price"},
+                                "after": {"status": "failed"}}
+            with store.history() as history:
+                history.record_run(URL, record, 0)
+                recalled = history.recall(URL)["runs"][0]
+            self.assertEqual(recalled["state"], "failed")
+            self.assertIn("Confirm the team price", recalled["summary"])
+
 
 class RetestTests(unittest.TestCase):
     def test_frozen_statement_rejects_wrong_region_contradiction_and_ambiguous_identity(self):

@@ -134,7 +134,7 @@ async def verify_test(store, test_id, change_context, origins, fixture_origin, *
                "meaning": "The same user-confirmed statements in the same retained source regions and replayed control states."}
     store.write(result["run_id"], "retest.json", receipt)
     with store.history() as history:
-        history.record_run(definition["site_url"], after, current_revision)
+        history.record_run(definition["site_url"], {**after, "retest": receipt}, current_revision)
     from .report import export_report
     path = export_report(store, result["run_id"])
     return {"state": after_checks["status"], "run_id": result["run_id"], "test_id": test_id,

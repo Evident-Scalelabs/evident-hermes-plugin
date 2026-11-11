@@ -165,14 +165,19 @@ class SiteHistory:
                 "artifacts": "Previously exported reports and immutable run evidence remain in their selected runs."}
 
     def record_run(self, url, record, revision):
+        retest = record.get("retest")
+        summary = record.get("review", {}).get("summary", "")
+        state = record.get("scan", record["result"]).get("state", "partial")
+        if retest:
+            summary = "Saved test " + retest["test_id"] + " · " + retest["definition"]["title"]
+            state = retest["after"]["status"]
         with self.db:
             site, _ = self._site(url)
             if self.recall(url)["comparison_revision"] != revision:
                 return False
             self.db.execute("INSERT OR IGNORE INTO evident_history VALUES (?, ?, ?, ?, ?, ?, ?)",
                             (record["run_id"], site, record["plan"]["objective"], revision,
-                             record["result"].get("started", now()), record.get("review", {}).get("summary", "")[:2000],
-                             record.get("scan", record["result"]).get("state", "partial")))
+                             record["result"].get("started", now()), summary[:2000], state))
         return True
 
     def previous(self, url):
