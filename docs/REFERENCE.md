@@ -59,7 +59,7 @@ Before a change, confirm the full expected statement in each cited region. `evid
 hermes evident verify TEST_ID --saved --change "The site owner corrected the confirmed pricing statement"
 ```
 
-Verification compares the same rendered statement and state, normalizing whitespace. A match in another region cannot satisfy it. Contradictory wording fails the check. Missing/ambiguous identity, changed conditions or truncated text makes it inconclusive. Older captures without stable identity need a new baseline. A run-level replay uses its immutable expanded plan and assertions without replanning. The before/after view shows the recorded states and outcomes, with no claim about customer behavior.
+Verification compares the same rendered statement and state, normalizing whitespace. A match in another region cannot satisfy it. Contradictory wording fails the check. Missing/ambiguous identity, changed conditions or truncated text makes it inconclusive. A corrected heading can satisfy its own cited region. Goal, audience and competitor changes preserve saved tests. Changing or forgetting a confirmed fact leaves its test inconclusive until the fact is restored or a new test is confirmed. Older captures without stable identity need a new baseline. A run-level replay uses its immutable expanded plan and assertions without replanning. The before/after view shows the recorded states and outcomes, with no claim about customer behavior.
 
 Comparable repeat reviews reuse the saved buyer questions. Changed goals, confirmed facts, model route or sampling conditions can make the comparison inapplicable. Compare the actual answers, support and selected alternatives.
 
