@@ -1,4 +1,4 @@
-![Evident — Is this evident? Follow the buyer journey, check AI answers and verify concrete fixes.](docs/media/cover.png)
+![Illustrated overview of the fictional Trailnote buyer journey and its observed prices.](docs/media/cover.png)
 
 # Evident — Is this evident?
 
@@ -16,11 +16,11 @@ In this fictional Trailnote demo, the homepage says **$29 per team**, while the 
 
 ![Actual controlled-demo report: highlighted homepage price before and after, with the proposed fix and verified statement.](docs/media/before-after.png)
 
-*Real browser captures from a fictional controlled site. The demo changes only its own fixture. A normal review observes your website; approved host tools or the site owner make changes.*
+*Trailnote is a fictional fixture. Hermes captured it on 11 November 2026 and the v0.19.4 renderer produced the report. On a real site, the owner or an approved host tool makes the correction.*
 
 ## Follow the decision, including the hidden answers
 
-![The actual seven-state demo route: overview, plan comparison, selected Field Pro plan, terms, questions, opened cancellation FAQ, opened export FAQ.](docs/media/journey.png)
+![Seven recorded states across four pages and three controls, from the plan overview to the opened cancellation and export FAQs.](docs/media/journey.png)
 
 Relevant paths depend on the site and goal. Missing pages, blocked controls and uncaptured handoffs stay visible rather than becoming invented findings.
 
@@ -28,7 +28,7 @@ Relevant paths depend on the site and goal. Missing pages, blocked controls and 
 
 ![Illustrative source-support explanation: supported means the source agrees, contradicted means it differs, and unknown means evidence is insufficient. This is not a captured model response.](docs/media/answers.png)
 
-Reports include independent answers from the model Hermes already uses, source checks and suggested competitor comparisons. Competitors are editable; unavailable evidence stays labelled. [See an actual competitor-report page](docs/competitor-report.png).
+Reports include independent answers from the model Hermes already uses, source checks and suggested competitor comparisons. You can edit the competitor list. The published InTouch example shows how the report labels an unavailable source. [View the report page](docs/competitor-report.png).
 
 ## Verify a fix instead of declaring victory
 
@@ -56,6 +56,6 @@ Save a user-confirmed expected statement, make the authorized correction, and re
 - Saved reports, captures and site memory are stored in the active Hermes profile. There is no telemetry or upload to Evident. Reports can include an optional [Evident](https://evident.so/) deep-report link.
 - Public review questions are independently defined and unscored. No private factor registry, weights, proprietary evaluation method or conversion prediction is included.
 
-[Full setup, compatibility, privacy, budgets and verification reference](docs/REFERENCE.md) · [Public review questions](PUBLIC_CHECKS.md) · [Visual provenance](docs/VISUALS.md)
+[Full setup, compatibility, privacy, budgets and verification reference](docs/REFERENCE.md) · [Public review questions](PUBLIC_CHECKS.md)
 
 Licensing has not yet been specified.
