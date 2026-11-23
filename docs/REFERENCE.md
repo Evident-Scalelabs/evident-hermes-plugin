@@ -33,21 +33,25 @@ URL reviews grant the requested public origin for that run. Capture-only tools u
 
 ## Review a real website
 
-Use chat or `hermes evident scan https://example.com/ --objective "Help first-time buyers choose a plan"`. Omit the goal to use the site's saved focus or the general review for a new site. Use `--general` to reset the focus. The URL tool uses the same implementation. In chat, `evident_scan` and its `evident_finish` continuation share one run ID and one report.
+Give Hermes the URL and your goal in chat. The equivalent CLI command is
 
-The review follows selected relevant links and display controls within its budget. The offline report contains observed strengths and problems, hypotheses, concrete changes and completion checks. Each of the [nine public questions](../PUBLIC_CHECKS.md) has an evidence-linked outcome. Measured text and image regions support highlights. Selected metadata and JSON-LD can support source claims without a screen location. The review covers the recorded states and tasks. Protected steps, failed reads and unvisited states remain gaps.
+```sh
+hermes evident scan https://example.com/ --objective "Help first-time buyers choose a plan"
+```
 
-[The manifest](../plugin.yaml) owns budget settings and defaults. `--max-pages` and `--seconds` override the page and capture/planning ceilings for one run. The [review implementation](../interpretation.py) owns planning, vision and final report limits. The [browser collector](../browser.py) owns navigation, request, body and image caps. Reports retain actual work, metered calls, exact source text, requested/final URLs, capture geometry and unresolved tasks. Interrupted work can return a labelled partial report.
+Omitting the goal reuses the site's saved focus or starts a general review. Use `--general` to request the general review. `--max-pages` and `--seconds` bound exploration and planning. The [manifest](../plugin.yaml) owns defaults, the [review implementation](../interpretation.py) owns model limits and the [browser collector](../browser.py) owns capture limits.
 
-To recover a saved report, ask Hermes for it by exact URL or use `evident_inspect` with a run ID and `summary_only: true`. Retrieval performs no network or model calls. For already requested comparison work that stopped after the website stage, resume the same run with `evident_finish`.
+The offline report answers the [public review questions](../PUBLIC_CHECKS.md) using observed pages and controls. Highlights cite measured text or image regions. Metadata and JSON-LD can support a claim without a screen location. Reports retain source text, requested and final URLs, capture geometry, metered calls and gaps, including protected or unvisited steps.
+
+To retrieve a saved report without another network or model call, ask for the exact URL or use `evident_inspect` with the run ID and `summary_only: true`. Interrupted work may return a partial report. Resume an already requested comparison with `evident_finish` and the original run ID.
 
 ## Independent AI answers and suggested alternatives
 
-URL reports include four independent questions by default. Use `--no-context` or tool input `context: false` for a website-only review. The configured model receives each question without the scanned site or other answers. These are sampled model answers. The report retains the actual model route, questions, answers and source checks.
+The default review asks the configured model four questions independently of the site and one another. It retains the model route, questions, answers and cited passages. Use `--no-context` or `context: false` for a website-only report.
 
-[The context collector](../contextual.py) bounds the additional model calls, public source reads and time. It classifies exact answer spans and checks factual claims against exact passages from that answer's own sources. One round of selected observed source links can resolve an unknown, with a separate reassessment. Conflicting, missing and insufficient evidence stays unknown. Advice and author uncertainty stay distinct from factual counts. Source support indicates agreement with retained passages. A format retry preserves both raw answers, and failed comparison work leaves the website report available.
+The [context collector](../contextual.py) compares factual answer spans with the answer's sources. It may follow one round of observed links to reassess an unknown. Conflicting or insufficient sources stay unknown. Advice and uncertainty are labeled separately. A failed comparison preserves the website report.
 
-Suggested competitors depend on the saved goal, offering, audience and geography. Each candidate's public text supports a scoped comparison. Use site memory to correct the candidate list. For a deeper comparison on a saved review, call `evident_finish` with its run ID and `competitors: true`. It adds one bounded configured-model analysis of retained sources and reuses a saved result on repeat.
+Competitor suggestions use the saved goal, offering, audience, geography and candidates' public text. Correct the list in site memory. For deeper analysis of retained sources, call `evident_finish` with the run ID and `competitors: true`. Repeated requests reuse the saved result.
 
 ## Site memory and repeatable corrections
 
@@ -59,7 +63,9 @@ Before a change, confirm the full expected statement in each cited region. `evid
 hermes evident verify TEST_ID --saved --change "The site owner corrected the confirmed pricing statement"
 ```
 
-Verification compares the same rendered statement and state, normalizing whitespace. A match in another region cannot satisfy it. Contradictory wording fails the check. Missing/ambiguous identity, changed conditions or truncated text makes it inconclusive. A corrected heading can satisfy its own cited region. Goal, audience and competitor changes preserve saved tests. Changing or forgetting a confirmed fact leaves its test inconclusive until the fact is restored or a new test is confirmed. Older captures without stable identity need a new baseline. A run-level replay uses its immutable expanded plan and assertions without replanning. The before/after view shows the recorded states and outcomes, with no claim about customer behavior.
+A [saved test](../retests.py) compares the confirmed statement in its original region and control state after normalizing whitespace. Conflicting wording fails. Ambiguous identity, changed conditions or truncated text gives an inconclusive result. Older captures without stable identity require a new baseline.
+
+Changing or forgetting a confirmed fact makes its test inconclusive until the fact is restored or a new test confirmed. Edits to the goal, audience or competitor list preserve tests. To compare the entire run, replay the saved run ID and its original plan and assertions.
 
 Comparable repeat reviews reuse the saved buyer questions. Changed goals, confirmed facts, model route or sampling conditions can make the comparison inapplicable. Compare the actual answers, support and selected alternatives.
 
@@ -108,7 +114,7 @@ Use `evident_delete` with an exact run ID and `confirm_delete: true` only after 
 
 ## Host compatibility
 
-Use Python 3.11+ and a supported POSIX Hermes host with tool/skill registration and native plugin storage. See [manifest and dependency inventory](../DEPENDENCIES.md) for versions. Inspect the retained compatibility record before claiming support for a new runtime or packaged distribution.
+Use Python 3.11+ and a supported POSIX Hermes host with tool/skill registration and native plugin storage. The [manifest](../plugin.yaml) pins Playwright. The [dependency inventory](../DEPENDENCIES.md) identifies upstream licenses and the isolated worker image.
 
 For a source installation in a disposable profile, follow the host's [catalog validation instructions](https://hermes-agent.nousresearch.com/docs/developer-guide/plugins/catalog-submission).
 
@@ -127,6 +133,7 @@ Use the smallest check that exercises the affected seam. Run deterministic unit 
 | HTTP limits, cancellation and replay | [integration_http.py](../tests/integration_http.py) |
 | Native registration, handlers and isolation | [integration_hermes.py](../tests/integration_hermes.py) with the authorized local Hermes source path |
 | Native browser dispatch and capture | [integration_browser.py](../tests/integration_browser.py) with the local Hermes source path and matching Chromium |
+| Strict content security policy, long pages, masked controls and fragment navigation | [integration_resilience.py](../tests/integration_resilience.py) |
 | Saved criteria and before/after evidence | [integration_saved_retests.py](../tests/integration_saved_retests.py) |
 | Adaptive navigation and control paths | [journey](../tests/integration_journey.py), [controls](../tests/integration_controls.py), [automatic controls](../tests/integration_auto_controls.py) and [same-origin read data](../tests/integration_read_data.py) |
 | Fictional site demo and same-assertion replay | [integration_demo.py](../tests/integration_demo.py) |
