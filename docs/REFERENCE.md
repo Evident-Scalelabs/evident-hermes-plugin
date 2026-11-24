@@ -4,32 +4,25 @@
 
 ## First-time setup
 
-1. In the intended Hermes profile, install and enable the catalog plugin.
+In the intended Hermes profile, install the plugin and the browser used by its Python environment.
 
-   ```sh
-   hermes plugins install evident-evidence --enable
-   ```
+```sh
+hermes plugins install evident-evidence --enable
+python -m playwright install chromium
+```
 
-2. Install managed Chromium from the Python environment that runs Hermes.
+Merge the following into the existing profile settings. Both options default off. Interpreted reports send captured public text and screenshots to your configured vision-capable model and may incur charges.
 
-   ```sh
-   python -m playwright install chromium
-   ```
+```yaml
+plugins:
+  entries:
+    evident-evidence:
+      settings:
+        browser_enabled: true
+        allow_model_interpretation: true
+```
 
-3. Merge these values into the profile's existing plugin settings. Preserve other entries. Model interpretation sends captured public text and screenshots to the configured Hermes model and can incur usage costs.
-
-   ```yaml
-   plugins:
-     entries:
-       evident-evidence:
-         settings:
-           browser_enabled: true
-           allow_model_interpretation: true
-   ```
-
-4. Reload the profile, start a fresh chat and ask **“Is this evident?”** Supply your URL and, for a focused report, the buying decision to investigate. Interpreted reports require a vision-capable configured model.
-
-URL reviews grant the requested public origin for that run. Capture-only tools use the profile's explicit authorization. Browser capture and model interpretation start disabled.
+Reload the profile and ask **“Is this evident?”** in a fresh chat. Supply a public URL and, optionally, a buying decision. That review authorizes the requested origin for the run.
 
 ## Review a real website
 
@@ -71,7 +64,7 @@ Comparable repeat reviews reuse the saved buyer questions. Changed goals, confir
 
 ## Run capture directly without a model account
 
-Authorize an exact public HTTPS origin for low-level capture, then observe and view. Verify by run ID after an authorized change.
+For rendered capture, enable `browser_enabled` and install Chromium. Authorize the exact HTTPS origin (no path or trailing slash), capture the page, then replay after the owner makes a change.
 
 ```sh
 hermes evident authorize https://example.com
@@ -80,13 +73,11 @@ hermes evident view RUN_ID
 hermes evident verify RUN_ID --change "Describe the authorized change"
 ```
 
-Use `--json` for a machine-readable receipt. For a custom rendered trace, use `evident_browse` with `open`, an exact `follow_link` selector or `scroll` steps. An empty assertion list records observations without a verdict. Use `evident_screenshot` with the run ID and zero-based step. For a custom report, `evident_report` accepts exact quotes and measured element indexes or null. See the [registered tool schemas](../__init__.py).
-
-`hermes evident demo` runs the fictional Trailnote plan-selection exercise. The harness edits its own isolated fixture, then compares the same assertions. Demo interpretation uses the configured model and may incur costs. It does not request competitor or independent-answer context.
+Add `--json` for the machine receipt. For custom rendering, `evident_browse` takes `open`, exact `follow_link` selectors or `scroll` steps. Empty assertions record observations only. Use `evident_screenshot` with the run ID and zero-based step. For `evident_report`, supply exact quotes and measured element indexes (or null). See the [tool schemas](../__init__.py).
 
 ## HTTP-source evidence loop
 
-Use `evident_observe` with explicit URLs, time/body limits, and literal `text_contains` or `http_status` assertions. Source text may include hidden content. An explicit list of URLs records independent GETs. For click paths, displayed controls and visibility, use the browser collector. [Evidence contracts](../evidence.py) own the retained HTTP and browser envelopes, assertion outcomes, hashes and replay. Missing, blocked and truncated evidence can leave assertions unknown. Earlier good steps remain inspectable after failure.
+For independent HTTP GETs, use `evident_observe` with explicit URLs, time/body limits and `text_contains` or `http_status` assertions. Source may contain hidden text. Use rendered capture for visibility and click paths. Missing, blocked or truncated responses can leave assertions unknown while earlier steps remain available. [Evidence and replay contracts](../evidence.py).
 
 ## Browser interoperability and visual evidence
 
@@ -125,6 +116,8 @@ hermes plugins enable evident-evidence
 ```
 
 ## Reproduce the checks
+
+`hermes evident demo` uses the configured model and may incur costs. It edits only the fictional Trailnote fixture and replays the original assertions. Independent answers and competitor comparisons are excluded.
 
 Use the smallest check that exercises the affected seam. Run deterministic unit coverage with `python -m unittest discover -s tests -p 'test_*.py' -v`. Run integrations in a disposable profile with receipts outside the repository.
 
